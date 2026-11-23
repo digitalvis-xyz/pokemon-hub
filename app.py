@@ -17,25 +17,29 @@ import traceback
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import base64
+
 import catalog
 import notifications
+import ocr
 import shops_watch
 import vinted_search
-from common import ROOT, STATE_DIR, Http, load_json, save_json
+from common import ROOT, STATE_DIR, Http, data_path, ensure_data, load_json, save_json
 from notify import telegram
 from urllib.parse import parse_qs, urlparse
 
-SETTINGS_PATH = os.path.join(ROOT, "settings.json")
-WISHLIST_PATH = os.path.join(ROOT, "wishlist.json")
-SHOPS_PATH = os.path.join(ROOT, "shops.json")
+SETTINGS_PATH = data_path("settings.json")
+WISHLIST_PATH = data_path("wishlist.json")
+SHOPS_PATH = data_path("shops.json")
 DIRECTORY_PATH = os.path.join(ROOT, "shop_directory.json")
 STATIC = os.path.join(ROOT, "static")
 
 DEFAULT_SETTINGS = {
-    "demo_mode": True,
+    "demo_mode": False,
     "vinted_domain": "fr",
     "vinted_delay": 3.0,
     "use_ai": True,
+    "screenshot_engine": "auto",  # auto = Claude if an API key is set, else free macOS OCR
     "anthropic_api_key": "",
     "telegram_bot_token": "",
     "telegram_chat_id": "",
@@ -115,6 +119,15 @@ class Job:
 
 
 JOB = Job()
+
+
+def purge_demo() -> None:
+    """Remove every trace of demo data: results, fixture state, demo notifications."""
+    for name in ("last_vinted_demo.json", "last_shops_demo.json", "shops_fixture_state.json"):
+        p = os.path.join(STATE_DIR, name)
+        if os.path.exists(p):
+            os.remove(p)
+    notifications.purge_demo()
 
 
 def results_path(kind: str, demo: bool) -> str:
@@ -290,6 +303,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/settings":
             s = get_settings()
+            was_demo = bool(s.get("demo_mode"))
             for k in DEFAULT_SETTINGS:
                 if k not in body:
                     continue
@@ -299,7 +313,13 @@ class Handler(BaseHTTPRequestHandler):
                 s[k] = v
             save_json(SETTINGS_PATH, s)
             apply_env(s)
+            if was_demo and not s.get("demo_mode"):
+                purge_demo()
             return self._send(200, {"ok": True, "settings": public_settings(s)})
+
+        if path == "/api/demo/purge":
+            purge_demo()
+            return self._send(200, {"ok": True})
 
         if path == "/api/catalog/add":
             data = load_json(WISHLIST_PATH, {"cards": []})
@@ -320,21 +340,32 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"added": added, "errors": errors, "cards": data["cards"]})
 
         if path == "/api/wishlist/screenshot":
-            apply_env(get_settings())
+            s = get_settings()
+            apply_env(s)
             img = body.get("image", "")
             if "," in img[:100]:
                 img = img.split(",", 1)[1]
+            engine = s.get("screenshot_engine", "auto")
+            use_claude = engine == "claude" or (engine == "auto" and os.environ.get("ANTHROPIC_API_KEY"))
             try:
-                detected = catalog.read_screenshot(img, body.get("media_type", "image/jpeg"))
+                if use_claude:
+                    detected = catalog.read_screenshot(img, body.get("media_type", "image/jpeg"))
+                    resolver = catalog.resolve
+                else:
+                    shot = os.path.join(STATE_DIR, "last_screenshot.jpg")
+                    with open(shot, "wb") as f:
+                        f.write(base64.b64decode(img))
+                    detected = ocr.parse(ocr.read_lines(shot))
+                    resolver = catalog.resolve_by_number
             except Exception as e:
-                return self._send(400, {"error": str(e)[:300]})
+                return self._send(400, {"error": str(e)[:400]})
             results = []
             for d in detected[:60]:
                 try:
-                    results.append(catalog.resolve(d))
+                    results.append(resolver(d))
                 except Exception as e:
                     results.append({"detected": d, "best": None, "alternatives": [], "error": str(e)[:100]})
-            return self._send(200, {"results": results})
+            return self._send(200, {"results": results, "engine": "claude" if use_claude else "ocr"})
 
         if path == "/api/notifications/read":
             notifications.mark_read(body.get("ids"))
@@ -378,6 +409,10 @@ def main() -> None:
     ap.add_argument("--no-browser", action="store_true")
     args = ap.parse_args()
     os.makedirs(STATE_DIR, exist_ok=True)
+    for line in ensure_data():
+        print("Migration:", line)
+    if not get_settings().get("demo_mode"):
+        purge_demo()
     apply_env(get_settings())
     srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     url = "http://127.0.0.1:%d" % args.port

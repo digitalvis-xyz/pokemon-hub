@@ -232,7 +232,7 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
         </div>
       </div>
       <div id="st-shot" hidden>
-        <div class="drop" id="drop">Glisse une capture d'écran ici, colle-la (⌘V) ou clique pour choisir un fichier.<br><span class="meta">Liste Pokécardex, classeur, wishlist d'une autre app… Claude lit les cartes, puis on les retrouve dans le catalogue. Nécessite la clé API Anthropic (Réglages).</span>
+        <div class="drop" id="drop">Glisse une capture d'écran ici, colle-la (⌘V) ou clique pour choisir un fichier.<br><span class="meta">Liste Pokécardex, wishlist d'une autre app… Lecture gratuite avec l'OCR intégré au Mac (il faut que le nom et le numéro « 199/165 » soient visibles), ou avec Claude si une clé API est configurée. La première lecture OCR prend environ une minute (préparation).</span>
           <input type="file" id="file" accept="image/*" hidden></div>
         <div id="shotRes"></div>
       </div>
@@ -247,7 +247,7 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
   <!-- SETTINGS -->
   <section class="view" id="v-settings">
     <h2>Réglages</h2>
-    <p class="sub">Enregistrés dans <code>settings.json</code>, sur ton Mac uniquement.</p>
+    <p class="sub">Tes données (wishlist, boutiques, réglages) sont dans le dossier <code>data/</code>, sur ton Mac uniquement, jamais envoyées sur GitHub.</p>
     <div class="form">
       <label>Mode démo</label>
       <label class="toggle"><input type="checkbox" id="s-demo"> Utiliser les données de test (rien n'est envoyé sur Internet)</label>
@@ -257,6 +257,8 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
       <span class="hint">Plus c'est lent, moins Vinted risque de bloquer. 3 s est raisonnable.</span>
       <label>Vérification IA (Claude)</label>
       <label class="toggle"><input type="checkbox" id="s-ai"> Vérifier titre + photo des nouvelles annonces</label>
+      <label>Lecture des captures</label>
+      <select id="s-shot"><option value="auto">Auto (Claude si clé, sinon OCR du Mac)</option><option value="ocr">Toujours l'OCR du Mac (gratuit)</option><option value="claude">Toujours Claude</option></select>
       <label>Clé API Anthropic</label><input type="password" id="s-key" placeholder="sk-ant-…" autocomplete="off">
       <span class="hint">Optionnelle. Sans clé, seules les règles sont utilisées.</span>
       <label>Bot Telegram (token)</label><input type="password" id="s-tg" placeholder="123456:ABC…" autocomplete="off">
@@ -265,7 +267,7 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
       <label>Notifications du Mac</label>
       <label class="toggle"><input type="checkbox" id="s-bn"> Afficher une notification système quand l'app trouve quelque chose (page ouverte)</label>
       <span></span>
-      <div class="tools" style="margin:0"><button class="btn primary" id="saveSettings">Enregistrer</button><button class="btn" id="testTg">Tester Telegram</button></div>
+      <div class="tools" style="margin:0"><button class="btn primary" id="saveSettings">Enregistrer</button><button class="btn" id="testTg">Tester Telegram</button><button class="btn" id="purgeDemo">Effacer les données de démo</button></div>
     </div>
   </section>
 </main>
@@ -327,7 +329,9 @@ function renderDeals() {
   const key = {deal: r => r.deal_ratio ?? 9, price: r => r.price ?? 1e9, score: r => -(r.rule_score || 0)}[F.sort];
   list = [...list].sort((a, b) => key(a) - key(b));
   if (!rows.length) {
-    $("#deals").innerHTML = `<div class="empty">Pas encore de résultats.<br><br><button class="btn primary" data-run="vinted">Chercher sur Vinted</button></div>`;
+    $("#deals").innerHTML = (S.wishlist || []).length
+      ? `<div class="empty">Pas encore de résultats.<br><br><button class="btn primary" data-run="vinted">Chercher sur Vinted</button></div>`
+      : `<div class="empty">Ta wishlist est vide : ajoute d'abord les cartes que tu cherches.<br><br><button class="btn primary" onclick="show('wishlist');loadSets()">Ajouter des cartes</button></div>`;
   } else if (!list.length) {
     $("#deals").innerHTML = `<div class="empty">Rien dans ce filtre.</div>`;
   } else {
@@ -444,18 +448,19 @@ function renderSettings() {
   const s = S.settings;
   $("#s-demo").checked = !!s.demo_mode; $("#s-domain").value = s.vinted_domain; $("#s-delay").value = s.vinted_delay;
   try { $("#s-bn").checked = localStorage.getItem("bn") === "1"; } catch (_) {}
-  $("#s-ai").checked = !!s.use_ai; $("#s-key").value = s.anthropic_api_key; $("#s-tg").value = s.telegram_bot_token; $("#s-chat").value = s.telegram_chat_id;
+  $("#s-ai").checked = !!s.use_ai; $("#s-shot").value = s.screenshot_engine || "auto"; $("#s-key").value = s.anthropic_api_key; $("#s-tg").value = s.telegram_bot_token; $("#s-chat").value = s.telegram_chat_id;
 }
 $("#saveSettings").onclick = async () => {
   try {
     await api("/api/settings", {demo_mode: $("#s-demo").checked, vinted_domain: $("#s-domain").value, vinted_delay: +$("#s-delay").value || 3,
-      use_ai: $("#s-ai").checked, anthropic_api_key: $("#s-key").value.trim(), telegram_bot_token: $("#s-tg").value.trim(), telegram_chat_id: $("#s-chat").value.trim()});
+      use_ai: $("#s-ai").checked, screenshot_engine: $("#s-shot").value, anthropic_api_key: $("#s-key").value.trim(), telegram_bot_token: $("#s-tg").value.trim(), telegram_chat_id: $("#s-chat").value.trim()});
     const bn = $("#s-bn").checked;
     if (bn && "Notification" in window && Notification.permission !== "granted") await Notification.requestPermission();
     try { localStorage.setItem("bn", bn ? "1" : "0"); } catch (_) {}
     toast("Réglages enregistrés"); await load();
   } catch (e) { toast(e.message); }
 };
+$("#purgeDemo").onclick = async () => { await api("/api/demo/purge", {}); toast("Données de démo effacées"); await load(); };
 $("#testTg").onclick = async () => { const r = await api("/api/telegram/test", {}); toast(r.ok ? "Message envoyé ✅" : "Échec : vérifie le token et le chat id (et enregistre d'abord)"); };
 
 // ---------- jobs ----------
@@ -616,12 +621,12 @@ function downscale(file, max = 1800) {
 let SHOT = [];
 async function handleImage(file) {
   const data = await downscale(file);
-  drop.innerHTML = `Lecture de la capture par Claude… <span class="spin" style="display:inline-block;vertical-align:middle"></span><br><img src="${data}" alt="">`;
+  drop.innerHTML = `Lecture de la capture… <span class="spin" style="display:inline-block;vertical-align:middle"></span><br><img src="${data}" alt="">`;
   $("#shotRes").innerHTML = "";
   try {
     const r = await api("/api/wishlist/screenshot", {image: data, media_type: "image/jpeg"});
     SHOT = r.results; renderShot();
-    drop.innerHTML = `${SHOT.length} carte(s) lue(s). Glisse une autre capture pour continuer.<br><img src="${data}" alt="">`;
+    drop.innerHTML = `${SHOT.length} carte(s) lue(s) avec ${r.engine === "claude" ? "Claude" : "l'OCR du Mac (gratuit)"}. Glisse une autre capture pour continuer.<br><img src="${data}" alt="">`;
   } catch (e) {
     drop.innerHTML = `<span class="why">${esc(e.message)}</span><br>Réessaie avec une autre capture.`;
   }

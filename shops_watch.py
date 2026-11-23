@@ -20,7 +20,7 @@ import os
 import re
 import sys
 
-from common import ROOT, STATE_DIR, Http, load_json, norm, polite_sleep, save_json, stamp
+from common import ROOT, STATE_DIR, Http, data_path, ensure_data, load_json, norm, polite_sleep, save_json, stamp
 from notify import telegram
 from report import write_csv, write_html
 
@@ -199,7 +199,8 @@ def run(args) -> int:
     if args.detect:
         print(args.detect, "->", detect(Http(), args.detect.rstrip("/")))
         return 0
-    cfg = load_json(os.path.join(ROOT, "fixtures/shops_fixture.json" if args.fixtures else args.shops), {})
+    ensure_data()
+    cfg = load_json(os.path.join(ROOT, "fixtures/shops_fixture.json") if args.fixtures else (args.shops or data_path("shops.json")), {})
     res = watch(cfg, fixtures=args.fixtures, run_no=args.run, delay=args.delay)
     events, inventory = res["events"], res["inventory"]
     tag = "shops_" + stamp() + ("_fixture%d" % args.run if args.fixtures else "")
@@ -222,7 +223,7 @@ def run(args) -> int:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--shops", default="shops.json")
+    ap.add_argument("--shops", default="", help="default: data/shops.json")
     ap.add_argument("--detect", metavar="URL", help="only detect the shop engine")
     ap.add_argument("--delay", type=float, default=2.0)
     ap.add_argument("--fixtures", action="store_true")

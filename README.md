@@ -26,7 +26,8 @@ python3 app.py
 Your browser opens at http://127.0.0.1:8765. Leave the Terminal window open while you use the app, and press Ctrl+C there to stop it.
 You can also double-click **`start.command`**. The first time, macOS may block it: right-click it, choose *Open*, then confirm.
 
-The app starts in **demo mode** with test data, so you can click around right away. To use real data, go to **Réglages**, untick *Mode démo*, then click **Enregistrer**.
+The app runs on **real data**. Your wishlist, shops and settings live in the `data/` folder: it is never sent to GitHub, so `git pull` never touches it. The `wishlist.json` and `shops.json` at the root are only examples. On first start, anything real you had in them is copied into `data/`; the untouched example cards and shops are left out.
+To see the app with test data, tick *Mode démo* in Réglages. *Effacer les données de démo* removes every trace of it, including demo notifications.
 
 | Tab | What it does |
 |---|---|
@@ -37,7 +38,7 @@ The app starts in **demo mode** with test data, so you can click around right aw
 
 The **bell** (top right) is the notification centre: new Vinted matches, pre-orders, restocks and price drops, each with a link. Turn on *Notifications du Mac* in Réglages to also get system notifications while the page is open.
 
-The screenshot import needs an Anthropic API key (Réglages). The catalogue needs no key.
+**Screenshot import** is free by default: it uses the OCR built into macOS (Apple Vision). A small Swift helper is compiled the first time you use it, which takes about a minute and needs the Command Line Tools: `xcode-select --install`. It reads collector numbers like `199/165` and the names next to them, then matches them in the catalogue. With an Anthropic API key in Réglages, Claude reads the screenshot instead: it's better on photos and cluttered layouts, but it's paid. The catalogue never needs a key.
 
 *Auto* (top right) re-runs everything every 15, 30 or 60 minutes while the page is open.
 
@@ -114,7 +115,7 @@ Both scripts send an alert only for new matches, new pre-orders, restocks and pr
 
 ## Troubleshooting
 
-- `CERTIFICATE_VERIFY_FAILED`: if you use Python from python.org, run *Applications → Python 3.x → Install Certificates.command* once.
+- `CERTIFICATE_VERIFY_FAILED`: the app now fixes this automatically by using macOS's own certificates. If it still happens, run *Applications → Python 3.x → Install Certificates.command* once.
 - Vinted `HTTP 403`, `401` or an empty `items` list: Vinted's anti-bot protection kicked in. Wait, lower the frequency (`--delay 6`), or switch networks. The endpoint is undocumented and can change. All the Vinted code lives in the `Vinted` class, so it can be swapped for a paid scraper without touching the rest.
 - Too many false positives: raise the thresholds in `vinted_search.py` (`rule_score >= 55` = match) or add words to `BLOCK_WORDS` in `classify.py`.
 

@@ -47,6 +47,11 @@ def mark_read(ids: list[str] | None = None) -> None:
         save_json(PATH, data)
 
 
+def purge_demo() -> None:
+    with _lock:
+        save_json(PATH, [n for n in _load() if not n.get("demo")])
+
+
 def clear() -> None:
     with _lock:
         save_json(PATH, [])

@@ -36,9 +36,13 @@ def _img(base: str | None, quality: str = "low") -> str:
     return "%s/%s.webp" % (base, quality) if base else ""
 
 
+# TCGdex also hosts the Pokémon TCG *Pocket* mobile game (sets A1, A2a, B1, P-A…): not physical cards.
+POCKET_SET = re.compile(r"^(A\d|B\d|P-[A-Z])", re.I)
+
+
 def sets(lang: str = "fr") -> list[dict]:
-    """All sets, newest first: id, name, official/total counts, logo."""
-    data = _get("/%s/sets" % lang, ttl=7 * 86400)
+    """All physical-card sets, newest first: id, name, official/total counts, logo."""
+    data = [s for s in _get("/%s/sets" % lang, ttl=7 * 86400) if not POCKET_SET.match(s.get("id") or "")]
     out = [{
         "id": s.get("id"),
         "name": s.get("name"),
@@ -76,6 +80,8 @@ def search(q: str = "", set_id: str = "", lang: str = "fr", page: int = 1, per_p
     for c in cards:
         cid = c.get("id", "")
         set_key = cid.rsplit("-", 1)[0] if "-" in cid else set_id
+        if POCKET_SET.match(set_key or ""):
+            continue
         meta = counts.get(set_key, {})
         local = str(c.get("localId", ""))
         official = meta.get("official")
@@ -194,3 +200,45 @@ def resolve(detected: dict, lang_order=("fr", "en")) -> dict:
         if top >= 3 or (top >= 2 and not tie) or (len(uniq) == 1 and top >= 1):
             best = uniq[0]  # confident; otherwise the user picks among the alternatives
     return {"detected": detected, "best": best, "alternatives": uniq[:6]}
+
+
+def _set_cards(set_id: str, lang: str) -> list[dict]:
+    try:
+        return _get("/%s/sets/%s" % (lang, set_id), ttl=7 * 86400).get("cards") or []
+    except Exception:
+        return []
+
+
+def _name_score(read: str, card_name: str) -> int:
+    a, b = norm(read), norm(card_name)
+    if not a or not b:
+        return 0
+    if a == b or a in b or b in a:
+        return 2
+    return 1 if a.split()[0] == b.split()[0] else 0
+
+
+def resolve_by_number(detected: dict, lang: str = "fr") -> dict:
+    """OCR path: '199/165' identifies the set(s) by official size; the name breaks ties."""
+    number, total = _num(detected.get("number")), _num(detected.get("set_total"))
+    if not number or not total:
+        return resolve(detected)
+    read = detected.get("name") or ""
+    cands = []
+    for st in sets(lang):
+        if str(st.get("official") or "") != total:
+            continue
+        for c in _set_cards(st["id"], lang):
+            if _num(c.get("localId")) != number:
+                continue
+            en_name = next((e.get("name", "") for e in _set_cards(st["id"], "en") if e.get("id") == c.get("id")), "")
+            score = 2 + max(_name_score(read, c.get("name", "")), _name_score(read, en_name))
+            cands.append({"id": c.get("id"), "name": c.get("name"), "number": str(c.get("localId")),
+                          "set_id": st["id"], "set_name": st["name"], "set_total": str(st["official"]),
+                          "secret": int(number) > int(total), "image": _img(c.get("image")), "score": score})
+    if not cands:
+        return resolve(detected) if read else {"detected": detected, "best": None, "alternatives": []}
+    cands.sort(key=lambda c: -c["score"])
+    tie = len(cands) > 1 and cands[1]["score"] == cands[0]["score"]
+    best = cands[0] if (len(cands) == 1 or (not tie and cands[0]["score"] >= 3)) else None
+    return {"detected": detected, "best": best, "alternatives": cands[:6]}

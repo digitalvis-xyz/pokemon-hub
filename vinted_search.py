@@ -18,7 +18,7 @@ import os
 import sys
 
 from classify import claude_check, rule_check
-from common import ROOT, STATE_DIR, Http, load_json, polite_sleep, save_json, stamp
+from common import ROOT, STATE_DIR, Http, data_path, ensure_data, load_json, polite_sleep, save_json, stamp
 from notify import telegram
 from report import write_csv, write_html
 
@@ -171,7 +171,8 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
 
 
 def run(args) -> int:
-    cards = load_json(os.path.join(ROOT, args.wishlist), {"cards": []})["cards"]
+    ensure_data()
+    cards = load_json(args.wishlist or data_path("wishlist.json"), {"cards": []})["cards"]
     use_ai = False if args.no_ai else None
     rows = search(cards, args.domain, args.fixtures, use_ai, args.recheck, args.delay)
     name = "vinted_" + stamp()
@@ -187,7 +188,7 @@ def run(args) -> int:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--wishlist", default="wishlist.json")
+    ap.add_argument("--wishlist", default="", help="default: data/wishlist.json")
     ap.add_argument("--domain", default="fr", help="fr, pt, es, be, it, de ...")
     ap.add_argument("--delay", type=float, default=3.0, help="seconds between requests")
     ap.add_argument("--fixtures", action="store_true", help="offline test data")
