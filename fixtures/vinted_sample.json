@@ -1,0 +1,15 @@
+{
+  "_comment": "Fake data shaped like a Vinted /api/v2/catalog/items response, for offline tests.",
+  "items": [
+    {"id": 1001, "title": "Dracaufeu ex 199/165 Pokémon 151 FR", "price": {"amount": "120.0", "currency_code": "EUR"}, "status": "Très bon état", "user": {"login": "lucas_tcg"}, "url": "https://www.vinted.fr/items/1001", "photo": {"url": "https://placehold.co/200x280?text=Dracaufeu"}},
+    {"id": 1002, "title": "Carte Pokémon Dracaufeu ex 199/165 PSA 10", "price": {"amount": "450.0", "currency_code": "EUR"}, "status": "Neuf sans étiquette", "user": {"login": "grading_fr"}, "url": "https://www.vinted.fr/items/1002", "photo": {"url": "https://placehold.co/200x280?text=PSA10"}},
+    {"id": 1003, "title": "Lot de 20 cartes pokemon dont dracaufeu 199", "price": {"amount": "25.0", "currency_code": "EUR"}, "status": "Bon état", "user": {"login": "maman_vide_grenier"}, "url": "https://www.vinted.fr/items/1003", "photo": {"url": ""}},
+    {"id": 1004, "title": "Dracaufeu ex 199/165 proxy carte custom", "price": {"amount": "8.0", "currency_code": "EUR"}, "status": "Neuf avec étiquette", "user": {"login": "print_shop"}, "url": "https://www.vinted.fr/items/1004", "photo": {"url": ""}},
+    {"id": 1005, "title": "Mew ex 205/165 gold 151 neuf", "price": {"amount": "45.0", "currency_code": "EUR"}, "status": "Neuf sans étiquette", "user": {"login": "collec_mew"}, "url": "https://www.vinted.fr/items/1005", "photo": {"url": "https://placehold.co/200x280?text=Mew"}},
+    {"id": 1006, "title": "Mew ex 205 japonais", "price": {"amount": "30.0", "currency_code": "EUR"}, "status": "Très bon état", "user": {"login": "jp_import"}, "url": "https://www.vinted.fr/items/1006", "photo": {"url": ""}},
+    {"id": 1007, "title": "Noctali ex 161/131 Évolutions Prismatiques", "price": {"amount": "780.0", "currency_code": "EUR"}, "status": "Très bon état", "user": {"login": "eevee_fan"}, "url": "https://www.vinted.fr/items/1007", "photo": {"url": "https://placehold.co/200x280?text=Noctali"}},
+    {"id": 1008, "title": "Umbreon ex 161/131 PSA 10 PRE", "price": {"amount": "1400.0", "currency_code": "EUR"}, "status": "Neuf sans étiquette", "user": {"login": "slabs_eu"}, "url": "https://www.vinted.fr/items/1008", "photo": {"url": ""}},
+    {"id": 1009, "title": "Dracaufeu carte pokemon brillante", "price": {"amount": "15.0", "currency_code": "EUR"}, "status": "Satisfaisant", "user": {"login": "kid_cards"}, "url": "https://www.vinted.fr/items/1009", "photo": {"url": ""}},
+    {"id": 1010, "title": "Charizard ex MEW 199 english", "price": {"amount": "140.0", "currency_code": "EUR"}, "status": "Très bon état", "user": {"login": "uk_seller"}, "url": "https://www.vinted.fr/items/1010", "photo": {"url": ""}}
+  ]
+}

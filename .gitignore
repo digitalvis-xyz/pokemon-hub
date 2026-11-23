@@ -1,0 +1,10 @@
+# local data and secrets: never commit
+settings.json
+state/*
+!state/.keep
+results/*
+!results/.keep
+__pycache__/
+*.pyc
+.DS_Store
+run.log

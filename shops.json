@@ -1,0 +1,8 @@
+{
+  "_comment": "Add the shops you follow. Run `python3 shops_watch.py --detect https://shop-url` first to check each one. engine is optional (auto-detected).",
+  "keywords": ["pokemon", "pokémon"],
+  "shops": [
+    {"name": "Shop exemple FR", "url": "https://boutique-exemple.fr"},
+    {"name": "Loja exemplo PT", "url": "https://loja-exemplo.pt"}
+  ]
+}

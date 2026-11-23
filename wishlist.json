@@ -1,0 +1,44 @@
+{
+  "_comment": "Replace these examples with your own wishlist. id = your canonical card ID (any stable format, e.g. TCGdex ids). max_price in EUR.",
+  "cards": [
+    {
+      "id": "sv03.5-199",
+      "name_fr": "Dracaufeu ex",
+      "name_en": "Charizard ex",
+      "set_name": "151",
+      "set_code": "MEW",
+      "number": "199",
+      "set_total": "165",
+      "languages": ["fr", "en"],
+      "max_price": 150,
+      "allow_graded": true,
+      "allow_lots": false
+    },
+    {
+      "id": "sv03.5-205",
+      "name_fr": "Mew ex",
+      "name_en": "Mew ex",
+      "set_name": "151",
+      "set_code": "MEW",
+      "number": "205",
+      "set_total": "165",
+      "languages": ["fr"],
+      "max_price": 60,
+      "allow_graded": false,
+      "allow_lots": false
+    },
+    {
+      "id": "sv08.5-161",
+      "name_fr": "Noctali ex",
+      "name_en": "Umbreon ex",
+      "set_name": "Évolutions Prismatiques",
+      "set_code": "PRE",
+      "number": "161",
+      "set_total": "131",
+      "languages": ["fr", "en", "ja"],
+      "max_price": 900,
+      "allow_graded": true,
+      "allow_lots": false
+    }
+  ]
+}

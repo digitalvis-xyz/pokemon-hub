@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TCG Hub</title>
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#fff; --ink:#1d1b18; --muted:#6f6a62; --line:#e6e1d7;
+  --accent:#d6402f; --accent-ink:#fff; --ok:#1f8a5b; --ok-bg:#e6f4ec; --warn:#a86a00; --warn-bg:#fdf1d8;
+  --bad:#9b3326; --bad-bg:#fbe9e6; --info:#2a5db0; --info-bg:#e7eefb; --radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,select{font:inherit}
+a{color:inherit}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:10px 20px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;letter-spacing:-.01em}
+.ball{width:20px;height:20px;border-radius:50%;background:linear-gradient(var(--accent) 0 46%,#1d1b18 46% 54%,#fff 54%);border:2px solid #1d1b18;position:relative}
+.ball:after{content:"";position:absolute;inset:5px;border-radius:50%;background:#fff;border:2px solid #1d1b18}
+nav{display:flex;gap:2px;margin-left:12px}
+nav button{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;font-weight:500}
+nav button.on{background:var(--bg);color:var(--ink)}
+nav .count{font-size:11px;background:var(--accent);color:#fff;border-radius:9px;padding:0 6px;margin-left:4px}
+.spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:#cfc8ba}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{padding:4px 9px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+select,input[type=text],input[type=number],input[type=password],input[type=url]{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 9px;min-width:0}
+.demo{background:var(--warn-bg);color:var(--warn);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.status{max-width:1280px;margin:0 auto;padding:0 20px 8px;display:none;align-items:center;gap:10px;color:var(--muted);font-size:13px}
+.status.show{display:flex}
+.spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s 0.8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+pre.log{max-width:1280px;margin:0 auto 8px;padding:10px 20px;background:#1d1b18;color:#e9e4d8;font:12px/1.5 ui-monospace,Menlo,monospace;max-height:220px;overflow:auto;white-space:pre-wrap;display:none}
+pre.log.show{display:block}
+main{max-width:1280px;margin:0 auto;padding:20px}
+.view{display:none}.view.on{display:block}
+h2{font-size:18px;margin:0 0 4px} h3{font-size:15px;margin:24px 0 10px}
+.sub{color:var(--muted);margin:0 0 16px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:5px 12px;cursor:pointer;font-weight:500}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip .n{opacity:.6;margin-left:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+.card .img{aspect-ratio:4/3;background:#efebe3 center/cover no-repeat;position:relative}
+.card .img .ph{position:absolute;inset:0;display:grid;place-items:center;color:#b3ab9c;font-size:12px}
+.card .badges{position:absolute;top:8px;left:8px;display:flex;gap:4px;flex-wrap:wrap}
+.b{font-size:11px;font-weight:600;border-radius:6px;padding:2px 7px;background:#fff;border:1px solid var(--line)}
+.b.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.b.warn{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.b.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.b.info{background:var(--info-bg);color:var(--info);border-color:transparent}
+.b.new{background:var(--accent);color:#fff;border-color:transparent}
+.card .body{padding:12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.card .for{font-size:12px;color:var(--muted)}
+.card .t{font-weight:600;text-decoration:none;line-height:1.35}
+.card .t:hover{text-decoration:underline}
+.price{display:flex;align-items:baseline;gap:8px}
+.price b{font-size:20px}
+.price span{color:var(--muted);font-size:12px}
+.meter{height:6px;background:#efebe3;border-radius:3px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:3px}
+.meta{font-size:12px;color:var(--muted)}
+.why{font-size:12px;color:var(--bad)}
+.ai{font-size:12px;color:var(--info)}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:var(--radius);padding:40px;text-align:center;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600;background:#fbfaf7}
+tr:last-child td{border-bottom:0}
+td input[type=text],td input[type=number],td input[type=url]{width:100%}
+.ev{display:flex;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+.ev:last-child{border-bottom:0}
+.ev img{width:44px;height:44px;object-fit:cover;border-radius:8px;background:#efebe3;color:transparent;font-size:0}
+.ev .grow{flex:1;min-width:0}
+.ev .grow a{font-weight:600;text-decoration:none}
+.ev .grow a:hover{text-decoration:underline}
+.ev .p{text-align:right;white-space:nowrap}
+.ev .p s{color:var(--muted);font-size:12px;margin-right:4px}
+.shopsum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.shopsum div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px}
+.form{display:grid;grid-template-columns:220px 1fr;gap:14px 20px;align-items:center;max-width:760px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.form label{font-weight:500}
+.form .hint{grid-column:2;color:var(--muted);font-size:12px;margin-top:-10px}
+.toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.langs label{margin-right:8px;white-space:nowrap}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.foot{color:var(--muted);font-size:12px;margin-top:14px}
+@media (max-width:760px){nav{margin-left:0;overflow:auto}.bar{flex-wrap:wrap}.form{grid-template-columns:1fr}.form .hint{grid-column:1}}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo"><span class="ball"></span>TCG Hub</div>
+    <nav id="nav">
+      <button data-v="deals" class="on">Bons plans <span class="count" id="c-deals" hidden></span></button>
+      <button data-v="shops">Boutiques <span class="count" id="c-shops" hidden></span></button>
+      <button data-v="wishlist">Wishlist</button>
+      <button data-v="settings">Réglages</button>
+    </nav>
+    <div class="spacer"></div>
+    <span class="demo" id="demo" title="Données de démo : cliquez pour ouvrir les réglages" hidden>Mode démo</span>
+    <select id="auto" title="Actualisation automatique (tant que la page est ouverte)">
+      <option value="0">Auto : off</option><option value="15">Toutes les 15 min</option>
+      <option value="30">Toutes les 30 min</option><option value="60">Toutes les heures</option>
+    </select>
+    <button class="btn primary" id="runAll">Tout actualiser</button>
+  </div>
+  <div class="status" id="status"><span class="spin"></span><span id="statusText">En cours…</span>
+    <button class="btn small" id="logBtn">Voir le journal</button></div>
+  <pre class="log" id="log"></pre>
+</header>
+
+<main>
+  <!-- DEALS -->
+  <section class="view on" id="v-deals">
+    <div class="tools">
+      <h2 style="margin-right:auto">Vinted × ta wishlist</h2>
+      <button class="btn" data-run="vinted">Chercher sur Vinted</button>
+    </div>
+    <div class="tools" id="dealTools">
+      <span class="chip on" data-f="match">Matches<span class="n" id="n-match"></span></span>
+      <span class="chip" data-f="review">À vérifier<span class="n" id="n-review"></span></span>
+      <span class="chip" data-f="rejected">Rejetées<span class="n" id="n-rejected"></span></span>
+      <span class="chip" data-f="all">Tout</span>
+      <select id="cardFilter"><option value="">Toutes les cartes</option></select>
+      <select id="sort">
+        <option value="deal">Meilleur deal</option><option value="price">Prix croissant</option><option value="score">Score</option>
+      </select>
+      <label class="toggle"><input type="checkbox" id="newOnly"> Nouvelles seulement</label>
+    </div>
+    <div id="deals"></div>
+    <div class="foot" id="dealsFoot"></div>
+  </section>
+
+  <!-- SHOPS -->
+  <section class="view" id="v-shops">
+    <div class="tools">
+      <h2 style="margin-right:auto">Boutiques en ligne</h2>
+      <button class="btn" data-run="shops">Vérifier les boutiques</button>
+    </div>
+    <div class="shopsum" id="shopSum"></div>
+    <h3>Changements récents</h3>
+    <div class="panel" id="events"></div>
+    <h3>Inventaire Pokémon</h3>
+    <div class="tools">
+      <input type="text" id="invSearch" placeholder="Rechercher (ex. ETB, display, 151…)" style="width:280px">
+      <label class="toggle"><input type="checkbox" id="invStock"> En stock</label>
+      <label class="toggle"><input type="checkbox" id="invPre"> Précommandes</label>
+      <label class="toggle"><input type="checkbox" id="invSealed"> Scellé</label>
+    </div>
+    <div class="panel"><table><thead><tr><th>Boutique</th><th>Produit</th><th>Prix</th><th>Stock</th><th></th></tr></thead><tbody id="inv"></tbody></table></div>
+    <div class="foot" id="shopsFoot"></div>
+    <h3>Boutiques suivies</h3>
+    <p class="sub">« Détecter » vérifie si la boutique est compatible (Shopify ou WooCommerce). Les autres demanderont un module RSS plus tard.</p>
+    <div class="panel"><table><thead><tr><th style="width:24%">Nom</th><th>URL</th><th style="width:130px">Moteur</th><th style="width:170px"></th></tr></thead><tbody id="shopList"></tbody></table></div>
+    <div class="tools" style="margin-top:10px"><button class="btn" id="addShop">+ Ajouter une boutique</button><button class="btn primary" id="saveShops">Enregistrer</button></div>
+  </section>
+
+  <!-- WISHLIST -->
+  <section class="view" id="v-wishlist">
+    <h2>Wishlist</h2>
+    <p class="sub">Chaque carte a un identifiant unique : c'est lui qui relie Vinted, les boutiques et (bientôt) les prix. Les ids TCGdex (ex. <code>sv03.5-199</code>) sont un bon choix.</p>
+    <div class="panel" style="overflow:auto"><table style="min-width:1050px">
+      <thead><tr><th>Id</th><th>Nom FR</th><th>Nom EN</th><th>Extension</th><th style="width:84px">Code</th><th style="width:70px">N°</th><th style="width:70px">Total</th><th>Langues</th><th style="width:90px">Prix max €</th><th>Gradée</th><th>Lots</th><th></th></tr></thead>
+      <tbody id="wl"></tbody></table></div>
+    <div class="tools" style="margin-top:10px"><button class="btn" id="addCard">+ Ajouter une carte</button><button class="btn primary" id="saveWl">Enregistrer</button></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="view" id="v-settings">
+    <h2>Réglages</h2>
+    <p class="sub">Enregistrés dans <code>settings.json</code>, sur ton Mac uniquement.</p>
+    <div class="form">
+      <label>Mode démo</label>
+      <label class="toggle"><input type="checkbox" id="s-demo"> Utiliser les données de test (rien n'est envoyé sur Internet)</label>
+      <label>Vinted</label>
+      <select id="s-domain"><option>fr</option><option>pt</option><option>es</option><option>be</option><option>it</option><option>de</option><option>nl</option><option>co.uk</option></select>
+      <label>Pause entre requêtes (s)</label><input type="number" id="s-delay" min="1" step="0.5" style="width:100px">
+      <span class="hint">Plus c'est lent, moins Vinted risque de bloquer. 3 s est raisonnable.</span>
+      <label>Vérification IA (Claude)</label>
+      <label class="toggle"><input type="checkbox" id="s-ai"> Vérifier titre + photo des nouvelles annonces</label>
+      <label>Clé API Anthropic</label><input type="password" id="s-key" placeholder="sk-ant-…" autocomplete="off">
+      <span class="hint">Optionnelle. Sans clé, seules les règles sont utilisées.</span>
+      <label>Bot Telegram (token)</label><input type="password" id="s-tg" placeholder="123456:ABC…" autocomplete="off">
+      <label>Telegram chat id</label><input type="text" id="s-chat" placeholder="123456789">
+      <span class="hint">Alertes pour les nouveaux matches, précommandes, retours en stock et baisses de prix.</span>
+      <span></span>
+      <div class="tools" style="margin:0"><button class="btn primary" id="saveSettings">Enregistrer</button><button class="btn" id="testTg">Tester Telegram</button></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || "") ? esc(u) : "#";
+const eur = v => v == null || v === "" ? "?" : Number(v).toLocaleString("fr-FR", {style: "currency", currency: "EUR"});
+const ago = t => { if (!t) return "jamais"; const m = Math.round((Date.now()/1000 - t)/60); return m < 1 ? "à l'instant" : m < 60 ? `il y a ${m} min` : `il y a ${Math.round(m/60)} h`; };
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200); }
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok && r.status !== 409) throw new Error(j.error || ("HTTP " + r.status));
+  return j;
+}
+
+let S = {}, F = {verdict: "match", card: "", sort: "deal", newOnly: false};
+
+// ---------- navigation ----------
+$$("#nav button").forEach(b => b.onclick = () => show(b.dataset.v));
+function show(v) {
+  $$("#nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  $$(".view").forEach(s => s.classList.toggle("on", s.id === "v-" + v));
+  location.hash = v;
+}
+$("#demo").onclick = () => show("settings");
+
+// ---------- load ----------
+async function load() {
+  S = await api("/api/state");
+  renderHeader(); renderDeals(); renderShops(); renderWishlist(); renderSettings(); renderJob(S.job);
+}
+function renderHeader() {
+  $("#demo").hidden = !S.settings.demo_mode;
+  const m = (S.vinted.rows || []).filter(r => r.verdict === "match" && r.new).length;
+  $("#c-deals").hidden = !m; $("#c-deals").textContent = m;
+  const e = (S.shops_result.events || []).filter(e => e.verdict === "match").length;
+  $("#c-shops").hidden = !e; $("#c-shops").textContent = e;
+}
+
+// ---------- deals ----------
+$$("#dealTools .chip").forEach(c => c.onclick = () => { F.verdict = c.dataset.f; $$("#dealTools .chip").forEach(x => x.classList.toggle("on", x === c)); renderDeals(); });
+$("#cardFilter").onchange = e => { F.card = e.target.value; renderDeals(); };
+$("#sort").onchange = e => { F.sort = e.target.value; renderDeals(); };
+$("#newOnly").onchange = e => { F.newOnly = e.target.checked; renderDeals(); };
+
+function renderDeals() {
+  const rows = S.vinted.rows || [];
+  ["match", "review", "rejected"].forEach(v => $("#n-" + v).textContent = rows.filter(r => r.verdict === v).length);
+  const sel = $("#cardFilter"), cur = F.card;
+  const cards = [...new Set(rows.map(r => r.query_card))];
+  sel.innerHTML = '<option value="">Toutes les cartes</option>' + cards.map(c => `<option ${c === cur ? "selected" : ""}>${esc(c)}</option>`).join("");
+  let list = rows.filter(r => (F.verdict === "all" || r.verdict === F.verdict) && (!F.card || r.query_card === F.card) && (!F.newOnly || r.new));
+  const key = {deal: r => r.deal_ratio ?? 9, price: r => r.price ?? 1e9, score: r => -(r.rule_score || 0)}[F.sort];
+  list = [...list].sort((a, b) => key(a) - key(b));
+  if (!rows.length) {
+    $("#deals").innerHTML = `<div class="empty">Pas encore de résultats.<br><br><button class="btn primary" data-run="vinted">Chercher sur Vinted</button></div>`;
+  } else if (!list.length) {
+    $("#deals").innerHTML = `<div class="empty">Rien dans ce filtre.</div>`;
+  } else {
+    $("#deals").innerHTML = '<div class="grid">' + list.map(dealCard).join("") + "</div>";
+  }
+  $("#dealsFoot").textContent = S.vinted.at ? `Dernière recherche ${ago(S.vinted.at)} · vinted.${S.vinted.domain || "fr"}${S.vinted.demo ? " · données de démo (liens factices)" : ""}` : "";
+  bindRunButtons();
+}
+function dealCard(r) {
+  const ratio = r.deal_ratio, pct = ratio ? Math.min(ratio, 1) * 100 : 0;
+  const col = ratio == null ? "#ccc" : ratio <= .75 ? "var(--ok)" : ratio <= .9 ? "#7aa63a" : ratio <= 1 ? "var(--warn)" : "var(--bad)";
+  const vb = {match: ["ok", "Match"], review: ["warn", "À vérifier"], rejected: ["bad", "Rejetée"]}[r.verdict];
+  const badges = [`<span class="b ${vb[0]}">${vb[1]}</span>`];
+  if (r.new) badges.push('<span class="b new">Nouveau</span>');
+  if (r.guess_lang || r.ai_lang) badges.push(`<span class="b">${esc((r.ai_lang || r.guess_lang).toUpperCase())}</span>`);
+  if (r.is_graded) badges.push('<span class="b info">Gradée</span>');
+  const img = r.photo_url ? `style="background-image:url('${safeUrl(r.photo_url)}')"` : "";
+  const why = r.verdict === "rejected" && (r.rule_reject || []).length ? `<div class="why">${esc(r.rule_reject.join(" · "))}</div>` : "";
+  const ai = r.ai_reason ? `<div class="ai">IA ${r.ai_match ? "✓" : "✗"} ${r.ai_confidence != null ? Math.round(r.ai_confidence * 100) + "% · " : ""}${esc(r.ai_reason)}</div>` : "";
+  return `<div class="card">
+    <div class="img" ${img}>${r.photo_url ? "" : '<div class="ph">pas de photo</div>'}<div class="badges">${badges.join("")}</div></div>
+    <div class="body">
+      <div class="for">${esc(r.query_card)}</div>
+      <a class="t" href="${safeUrl(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a>
+      <div class="price"><b>${eur(r.price)}</b>${ratio != null ? `<span>${Math.round(ratio * 100)}% de ton prix max</span>` : ""}</div>
+      <div class="meter"><i style="width:${pct}%;background:${col}"></i></div>
+      <div class="meta">${esc([r.condition, r.seller].filter(Boolean).join(" · "))}</div>
+      ${why}${ai}
+    </div></div>`;
+}
+
+// ---------- shops ----------
+["#invSearch", "#invStock", "#invPre", "#invSealed"].forEach(id => $(id).oninput = renderInventory);
+const EV = {NEW_PREORDER: ["info", "Précommande"], RESTOCK: ["ok", "Retour en stock"], NEW: ["ok", "Nouveau"], PRICE_DROP: ["ok", "Baisse de prix"], PRICE_UP: ["warn", "Hausse"], SOLD_OUT: ["bad", "Épuisé"]};
+function renderShops() {
+  const R = S.shops_result || {};
+  $("#shopSum").innerHTML = (R.shops || []).map(s => `<div><b>${esc(s.name)}</b> · ${esc(s.engine)} · ${s.count} produits · <span style="color:var(--muted)">${esc(s.status)}</span></div>`).join("");
+  const evs = R.history || R.events || [];
+  $("#events").innerHTML = evs.length ? evs.slice(0, 60).map(e => {
+    const t = EV[e.event] || ["", e.event];
+    const old = e.old_price && e.event.startsWith("PRICE") ? `<s>${eur(e.old_price)}</s>` : "";
+    return `<div class="ev">${e.image ? `<img src="${safeUrl(e.image)}" alt="" onerror="this.removeAttribute('src')">` : '<img alt="">'}
+      <div class="grow"><span class="b ${t[0]}">${t[1]}</span> <span class="meta">${esc(e.shop)}</span><br>
+      <a href="${safeUrl(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a></div>
+      <div class="p">${old}<b>${eur(e.price)}</b></div></div>`;
+  }).join("") : `<div class="empty" style="border:0">Aucun changement pour l'instant. Le premier passage enregistre l'état de référence, les suivants montrent ce qui bouge.<br><br><button class="btn primary" data-run="shops">Vérifier les boutiques</button></div>`;
+  $("#shopsFoot").textContent = R.at ? `Dernière vérification ${ago(R.at)}${R.demo ? " · données de démo (liens factices)" : ""}` : "";
+  renderInventory(); renderShopList(); bindRunButtons();
+}
+function renderInventory() {
+  const q = $("#invSearch").value.toLowerCase(), st = $("#invStock").checked, pre = $("#invPre").checked, se = $("#invSealed").checked;
+  const inv = ((S.shops_result || {}).inventory || []).filter(p => (!q || (p.title + " " + p.shop).toLowerCase().includes(q)) && (!st || p.available) && (!pre || p.preorder) && (!se || p.sealed));
+  $("#inv").innerHTML = inv.length ? inv.map(p => `<tr><td>${esc(p.shop)}</td><td>${esc(p.title)} ${p.preorder ? '<span class="b info">Précommande</span>' : ""}</td>
+    <td>${eur(p.price)}</td><td>${p.available ? '<span class="b ok">En stock</span>' : '<span class="b bad">Épuisé</span>'}</td>
+    <td><a class="btn small" href="${safeUrl(p.url)}" target="_blank" rel="noopener">Voir</a></td></tr>`).join("")
+    : `<tr><td colspan="5" style="color:var(--muted)">Rien à afficher.</td></tr>`;
+}
+let shopRows = [];
+function renderShopList() {
+  if (!shopRows._loaded) { shopRows = (S.shops || []).map(s => ({...s})); shopRows._loaded = true; }
+  $("#shopList").innerHTML = shopRows.map((s, i) => `<tr>
+    <td><input type="text" data-i="${i}" data-k="name" value="${esc(s.name)}"></td>
+    <td><input type="url" data-i="${i}" data-k="url" value="${esc(s.url)}" placeholder="https://…"></td>
+    <td>${s.engine ? `<span class="b ${s.engine === "unsupported" || s.engine === "error" ? "bad" : "ok"}">${esc(s.engine)}</span>` : '<span class="meta">auto</span>'}</td>
+    <td><button class="btn small" data-detect="${i}">Détecter</button> <button class="btn small" data-del="${i}">Retirer</button></td></tr>`).join("")
+    || `<tr><td colspan="4" style="color:var(--muted)">Aucune boutique. Ajoute celles que tu suis.</td></tr>`;
+  $$("#shopList input").forEach(inp => inp.oninput = () => { shopRows[inp.dataset.i][inp.dataset.k] = inp.value; });
+  $$("#shopList [data-del]").forEach(b => b.onclick = () => { shopRows.splice(+b.dataset.del, 1); renderShopList(); });
+  $$("#shopList [data-detect]").forEach(b => b.onclick = async () => {
+    const s = shopRows[+b.dataset.detect]; b.disabled = true; b.textContent = "…";
+    try { const r = await api("/api/shops/detect", {url: s.url}); s.engine = r.engine === "error" ? "error" : r.engine; toast(r.engine === "unsupported" ? "Pas compatible pour l'instant" : r.engine === "error" ? ("Erreur : " + (r.error || "")) : "Compatible : " + r.engine); }
+    catch (e) { toast(e.message); }
+    renderShopList();
+  });
+}
+$("#addShop").onclick = () => { shopRows.push({name: "", url: ""}); renderShopList(); };
+$("#saveShops").onclick = async () => {
+  const clean = shopRows.filter(s => s.name && s.url).map(s => ({name: s.name.trim(), url: s.url.trim(), ...(s.engine && !["unsupported", "error"].includes(s.engine) ? {engine: s.engine} : {})}));
+  try { await api("/api/shops", {shops: clean}); toast("Boutiques enregistrées"); S.shops = clean; } catch (e) { toast(e.message); }
+};
+
+// ---------- wishlist ----------
+let wl = [];
+const LANGS = ["fr", "en", "ja", "pt"];
+function renderWishlist() {
+  if (!wl._loaded) { wl = (S.wishlist || []).map(c => ({...c})); wl._loaded = true; }
+  const txt = (c, i, k, w) => `<input type="text" data-i="${i}" data-k="${k}" value="${esc(c[k])}" ${w ? `style="width:${w}px"` : ""}>`;
+  $("#wl").innerHTML = wl.map((c, i) => `<tr>
+    <td>${txt(c, i, "id")}</td><td>${txt(c, i, "name_fr")}</td><td>${txt(c, i, "name_en")}</td><td>${txt(c, i, "set_name")}</td>
+    <td>${txt(c, i, "set_code")}</td><td>${txt(c, i, "number")}</td><td>${txt(c, i, "set_total")}</td>
+    <td class="langs">${LANGS.map(l => `<label><input type="checkbox" data-i="${i}" data-lang="${l}" ${(c.languages || []).includes(l) ? "checked" : ""}> ${l}</label>`).join("")}</td>
+    <td><input type="number" data-i="${i}" data-k="max_price" value="${esc(c.max_price)}" min="0"></td>
+    <td><input type="checkbox" data-i="${i}" data-b="allow_graded" ${c.allow_graded ? "checked" : ""}></td>
+    <td><input type="checkbox" data-i="${i}" data-b="allow_lots" ${c.allow_lots ? "checked" : ""}></td>
+    <td><button class="btn small" data-del="${i}">✕</button></td></tr>`).join("")
+    || `<tr><td colspan="12" style="color:var(--muted)">Wishlist vide.</td></tr>`;
+  $$("#wl input[data-k]").forEach(inp => inp.oninput = () => { wl[inp.dataset.i][inp.dataset.k] = inp.type === "number" ? (inp.value === "" ? null : +inp.value) : inp.value; });
+  $$("#wl input[data-lang]").forEach(inp => inp.onchange = () => {
+    const c = wl[inp.dataset.i]; c.languages = LANGS.filter(l => $(`#wl input[data-i="${inp.dataset.i}"][data-lang="${l}"]`).checked);
+  });
+  $$("#wl input[data-b]").forEach(inp => inp.onchange = () => { wl[inp.dataset.i][inp.dataset.b] = inp.checked; });
+  $$("#wl [data-del]").forEach(b => b.onclick = () => { wl.splice(+b.dataset.del, 1); renderWishlist(); });
+}
+$("#addCard").onclick = () => { wl.push({id: "", name_fr: "", name_en: "", set_name: "", set_code: "", number: "", set_total: "", languages: ["fr"], max_price: null, allow_graded: false, allow_lots: false}); renderWishlist(); };
+$("#saveWl").onclick = async () => {
+  const bad = wl.findIndex(c => !String(c.id || "").trim() || !String(c.number || "").trim());
+  if (bad >= 0) return toast(`Ligne ${bad + 1} : il faut au moins un id et un numéro`);
+  try { await api("/api/wishlist", {cards: wl}); toast("Wishlist enregistrée"); } catch (e) { toast(e.message); }
+};
+
+// ---------- settings ----------
+function renderSettings() {
+  const s = S.settings;
+  $("#s-demo").checked = !!s.demo_mode; $("#s-domain").value = s.vinted_domain; $("#s-delay").value = s.vinted_delay;
+  $("#s-ai").checked = !!s.use_ai; $("#s-key").value = s.anthropic_api_key; $("#s-tg").value = s.telegram_bot_token; $("#s-chat").value = s.telegram_chat_id;
+}
+$("#saveSettings").onclick = async () => {
+  try {
+    await api("/api/settings", {demo_mode: $("#s-demo").checked, vinted_domain: $("#s-domain").value, vinted_delay: +$("#s-delay").value || 3,
+      use_ai: $("#s-ai").checked, anthropic_api_key: $("#s-key").value.trim(), telegram_bot_token: $("#s-tg").value.trim(), telegram_chat_id: $("#s-chat").value.trim()});
+    toast("Réglages enregistrés"); await load();
+  } catch (e) { toast(e.message); }
+};
+$("#testTg").onclick = async () => { const r = await api("/api/telegram/test", {}); toast(r.ok ? "Message envoyé ✅" : "Échec : vérifie le token et le chat id (et enregistre d'abord)"); };
+
+// ---------- jobs ----------
+function bindRunButtons() { $$("[data-run]").forEach(b => b.onclick = () => run(b.dataset.run)); }
+$("#runAll").onclick = () => run("all");
+$("#logBtn").onclick = () => $("#log").classList.toggle("show");
+let polling = null;
+async function run(kind) {
+  const r = await api("/api/run/" + kind, {});
+  if (!r.started) toast("Une tâche tourne déjà");
+  renderJob(r.job); poll();
+}
+function renderJob(j) {
+  const busy = j && j.running;
+  $("#status").classList.toggle("show", !!busy || !!(j && j.error));
+  $("#statusText").textContent = busy ? `En cours : ${({vinted: "recherche Vinted", shops: "vérification des boutiques", all: "actualisation complète"})[j.kind] || j.kind}… ${(j.log || []).slice(-1)[0] || ""}`
+    : (j && j.error ? "Erreur : " + j.error : "");
+  $(".spin").style.display = busy ? "" : "none";
+  $("#log").textContent = (j && j.log || []).join("\n");
+  $("#log").scrollTop = 1e9;
+  $$("[data-run], #runAll").forEach(b => b.disabled = !!busy);
+}
+function poll() {
+  clearInterval(polling);
+  polling = setInterval(async () => {
+    const j = await api("/api/job");
+    renderJob(j);
+    if (!j.running) { clearInterval(polling); await load(); if (!j.error) toast("Terminé"); }
+  }, 1000);
+}
+// auto refresh while the page is open
+let autoT = null;
+$("#auto").onchange = e => {
+  clearInterval(autoT); const m = +e.target.value;
+  try { localStorage.setItem("auto", m); } catch (_) {}
+  if (m) { autoT = setInterval(() => run("all"), m * 60000); toast(`Actualisation toutes les ${m} min`); }
+};
+try { const m = localStorage.getItem("auto"); if (m && +m) { $("#auto").value = m; $("#auto").onchange({target: $("#auto")}); } } catch (_) {}
+
+load().then(() => { if (location.hash) show(location.hash.slice(1)); if (S.job.running) poll(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{
+ "products": [
+  {
+   "id": 10,
+   "name": "Booster Box Pokémon Surging Sparks EN",
+   "permalink": "https://loja-demo.pt/produto/10",
+   "prices": {
+    "price": "15990",
+    "currency_minor_unit": 2,
+    "currency_code": "EUR"
+   },
+   "is_in_stock": true,
+   "images": [
+    {
+     "src": "https://placehold.co/120?text=PT10"
+    }
+   ],
+   "categories": [
+    {
+     "name": "Pokémon TCG"
+    }
+   ],
+   "stock_availability": {
+    "text": "Em stock"
+   }
+  },
+  {
+   "id": 11,
+   "name": "Elite Trainer Box 151 EN",
+   "permalink": "https://loja-demo.pt/produto/11",
+   "prices": {
+    "price": "7990",
+    "currency_minor_unit": 2,
+    "currency_code": "EUR"
+   },
+   "is_in_stock": false,
+   "images": [
+    {
+     "src": "https://placehold.co/120?text=PT11"
+    }
+   ],
+   "categories": [
+    {
+     "name": "Pokémon TCG"
+    }
+   ],
+   "stock_availability": {
+    "text": "Esgotado"
+   }
+  },
+  {
+   "id": 12,
+   "name": "Magic Bundle",
+   "permalink": "https://loja-demo.pt/produto/12",
+   "prices": {
+    "price": "4500",
+    "currency_minor_unit": 2,
+    "currency_code": "EUR"
+   },
+   "is_in_stock": true,
+   "images": [
+    {
+     "src": "https://placehold.co/120?text=PT12"
+    }
+   ],
+   "categories": [
+    {
+     "name": "Magic"
+    }
+   ],
+   "stock_availability": {
+    "text": "Em stock"
+   }
+  }
+ ]
+}

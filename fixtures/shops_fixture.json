@@ -1,0 +1,20 @@
+{
+ "keywords": [
+  "pokemon",
+  "pokémon"
+ ],
+ "shops": [
+  {
+   "name": "Shop demo FR",
+   "url": "https://shop-demo.fr",
+   "engine": "shopify",
+   "fixture": "shopify_demo"
+  },
+  {
+   "name": "Loja demo PT",
+   "url": "https://loja-demo.pt",
+   "engine": "woocommerce",
+   "fixture": "woo_demo"
+  }
+ ]
+}
