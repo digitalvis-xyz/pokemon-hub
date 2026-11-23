@@ -17,14 +17,18 @@ import traceback
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import catalog
+import notifications
 import shops_watch
 import vinted_search
 from common import ROOT, STATE_DIR, Http, load_json, save_json
 from notify import telegram
+from urllib.parse import parse_qs, urlparse
 
 SETTINGS_PATH = os.path.join(ROOT, "settings.json")
 WISHLIST_PATH = os.path.join(ROOT, "wishlist.json")
 SHOPS_PATH = os.path.join(ROOT, "shops.json")
+DIRECTORY_PATH = os.path.join(ROOT, "shop_directory.json")
 STATIC = os.path.join(ROOT, "static")
 
 DEFAULT_SETTINGS = {
@@ -125,6 +129,9 @@ def job_vinted(say) -> None:
     rows = vinted_search.search(cards, domain=s["vinted_domain"], fixtures=demo, use_ai=bool(s["use_ai"]),
                                 delay=float(s["vinted_delay"]), log=say)
     save_json(results_path("vinted", demo), {"at": time.time(), "demo": demo, "domain": s["vinted_domain"], "rows": rows})
+    n = notifications.add(notifications.from_vinted(rows, demo))
+    if n:
+        say("%d nouvelle(s) notification(s)" % n)
 
 
 def job_shops(say) -> None:
@@ -148,6 +155,21 @@ def job_shops(say) -> None:
     res["history"] = res.get("history") or res["events"]
     say("%d changes · %d Pokémon products in total" % (len(res["events"]), len(res["inventory"])))
     save_json(results_path("shops", demo), dict(res, at=time.time(), demo=demo))
+    n = notifications.add(notifications.from_shops(res["events"], demo))
+    if n:
+        say("%d nouvelle(s) notification(s)" % n)
+
+
+def job_detect(say) -> None:
+    data = load_json(SHOPS_PATH, {"keywords": ["pokemon", "pokémon"], "shops": []})
+    http = Http()
+    for shop in data.get("shops", []):
+        engine = shops_watch.detect(http, shop["url"].rstrip("/"))
+        shop["engine"] = engine
+        say("  %-26s %s" % (shop["name"][:26], engine))
+    save_json(SHOPS_PATH, data)
+    ok = sum(1 for s in data["shops"] if s["engine"] in ("shopify", "woocommerce"))
+    say("%d/%d boutiques compatibles" % (ok, len(data["shops"])))
 
 
 def job_all(say) -> None:
@@ -157,7 +179,13 @@ def job_all(say) -> None:
     job_shops(say)
 
 
-JOBS = {"vinted": job_vinted, "shops": job_shops, "all": job_all}
+JOBS = {"vinted": job_vinted, "shops": job_shops, "all": job_all, "detect": job_detect}
+
+
+def shop_name_from_url(url: str) -> str:
+    host = urlparse(url).netloc.lower().replace("www.", "")
+    base = host.split(".")[0]
+    return " ".join(w.capitalize() for w in base.replace("_", "-").split("-")) or host
 
 
 # ---------- HTTP ----------
@@ -196,9 +224,28 @@ class Handler(BaseHTTPRequestHandler):
                 "vinted": load_json(results_path("vinted", demo), {}),
                 "shops_result": load_json(results_path("shops", demo), {}),
                 "job": JOB.snapshot(),
+                "unread": notifications.list_all()["unread"],
             })
         if path == "/api/job":
             return self._send(200, JOB.snapshot())
+        qs = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
+        try:
+            if path == "/api/catalog/sets":
+                return self._send(200, {"sets": catalog.sets(qs.get("lang", "fr"))})
+            if path == "/api/catalog/search":
+                return self._send(200, catalog.search(
+                    q=qs.get("q", ""), set_id=qs.get("set", ""), lang=qs.get("lang", "fr"),
+                    page=int(qs.get("page", 1)), secret_only=qs.get("secret") == "1"))
+        except Exception as e:
+            return self._send(502, {"error": "Catalogue TCGdex injoignable : %s" % str(e)[:160]})
+        if path == "/api/notifications":
+            return self._send(200, notifications.list_all())
+        if path == "/api/shops/directory":
+            followed = {s["url"].rstrip("/").lower() for s in load_json(SHOPS_PATH, {"shops": []}).get("shops", [])}
+            d = load_json(DIRECTORY_PATH, {"shops": []})
+            for sh in d.get("shops", []):
+                sh["followed"] = sh["url"].rstrip("/").lower() in followed
+            return self._send(200, d)
         return self._send(404, {"error": "not found"})
 
     def do_POST(self):
@@ -253,6 +300,69 @@ class Handler(BaseHTTPRequestHandler):
             save_json(SETTINGS_PATH, s)
             apply_env(s)
             return self._send(200, {"ok": True, "settings": public_settings(s)})
+
+        if path == "/api/catalog/add":
+            data = load_json(WISHLIST_PATH, {"cards": []})
+            have = {c["id"] for c in data.get("cards", [])}
+            added, errors = [], []
+            for cid in body.get("ids", [])[:50]:
+                if cid in have:
+                    continue
+                try:
+                    entry = catalog.to_wishlist_entry(cid)
+                    entry.update({k: v for k, v in (body.get("defaults") or {}).items() if k in ("languages", "max_price")})
+                    data.setdefault("cards", []).append(entry)
+                    have.add(cid)
+                    added.append(entry)
+                except Exception as e:
+                    errors.append("%s: %s" % (cid, str(e)[:80]))
+            save_json(WISHLIST_PATH, data)
+            return self._send(200, {"added": added, "errors": errors, "cards": data["cards"]})
+
+        if path == "/api/wishlist/screenshot":
+            apply_env(get_settings())
+            img = body.get("image", "")
+            if "," in img[:100]:
+                img = img.split(",", 1)[1]
+            try:
+                detected = catalog.read_screenshot(img, body.get("media_type", "image/jpeg"))
+            except Exception as e:
+                return self._send(400, {"error": str(e)[:300]})
+            results = []
+            for d in detected[:60]:
+                try:
+                    results.append(catalog.resolve(d))
+                except Exception as e:
+                    results.append({"detected": d, "best": None, "alternatives": [], "error": str(e)[:100]})
+            return self._send(200, {"results": results})
+
+        if path == "/api/notifications/read":
+            notifications.mark_read(body.get("ids"))
+            return self._send(200, notifications.list_all())
+
+        if path == "/api/notifications/clear":
+            notifications.clear()
+            return self._send(200, notifications.list_all())
+
+        if path == "/api/shops/quick-add":
+            url = (body.get("url") or "").strip()
+            if url and not url.startswith("http"):
+                url = "https://" + url
+            p = urlparse(url)
+            if not p.netloc:
+                return self._send(400, {"error": "URL invalide"})
+            url = "%s://%s" % (p.scheme, p.netloc)
+            data = load_json(SHOPS_PATH, {"keywords": ["pokemon", "pokémon"], "shops": []})
+            if any(s["url"].rstrip("/").lower() == url.lower() for s in data.get("shops", [])):
+                return self._send(200, {"ok": True, "already": True, "shops": data["shops"]})
+            try:
+                engine = shops_watch.detect(Http(), url)
+            except Exception:
+                engine = "error"
+            shop = {"name": body.get("name") or shop_name_from_url(url), "url": url, "engine": engine}
+            data.setdefault("shops", []).append(shop)
+            save_json(SHOPS_PATH, data)
+            return self._send(200, {"ok": True, "shop": shop, "shops": data["shops"]})
 
         if path == "/api/telegram/test":
             apply_env(get_settings())

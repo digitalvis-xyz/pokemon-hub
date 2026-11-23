@@ -1,0 +1,15 @@
+{
+  "_comment": "Online Pokémon TCG shops in Portugal, found by web search on 2026-11-23. engine_hint is a guess from public URLs; the app's Détecter button confirms it. Add or correct entries freely.",
+  "country": "PT",
+  "shops": [
+    {"name": "Versus Gamecenter", "url": "https://versusgamecenter.pt", "city": "Online", "engine_hint": "shopify", "note": "Pré-encomendas Pokémon (ETB, displays)"},
+    {"name": "Templars Arena", "url": "https://templarsarena.com", "city": "Lisboa · Santarém", "engine_hint": "shopify", "note": "Loja TCG com lojas físicas"},
+    {"name": "Heimdall Geek Store", "url": "https://heimdallgeekstore.pt", "city": "Online", "engine_hint": "shopify", "note": "ETB, selados"},
+    {"name": "Ajogar", "url": "https://www.ajogar.com", "city": "Online", "engine_hint": "shopify", "note": "Jogos de tabuleiro e TCG"},
+    {"name": "Infinity Collectables", "url": "https://infinitycollectables.com", "city": "Online", "engine_hint": "shopify", "note": "Colecionáveis, ETB (verificar se envia de PT)"},
+    {"name": "Mercadia Games", "url": "https://mercadiagames.pt", "city": "Online", "engine_hint": "woocommerce", "note": "Selados Pokémon"},
+    {"name": "Diver", "url": "https://www.diver.pt", "city": "Coimbra · online", "engine_hint": "prestashop", "note": "Pré-encomendas; PrestaShop: precisa de outro módulo"},
+    {"name": "Continente", "url": "https://www.continente.pt", "city": "Nacional", "engine_hint": "other", "note": "Grande superfície; precisa de outro módulo"},
+    {"name": "Worten", "url": "https://www.worten.pt", "city": "Nacional", "engine_hint": "other", "note": "Grande superfície; precisa de outro módulo"}
+  ]
+}

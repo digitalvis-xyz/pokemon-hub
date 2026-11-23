@@ -31,9 +31,13 @@ The app starts in **demo mode** with test data, so you can click around right aw
 | Tab | What it does |
 |---|---|
 | Bons plans | Vinted listings matched to your wishlist, with photo, price vs. your max, language, and why a listing was rejected |
-| Boutiques | Pre-orders, restocks and price drops, the full Pokémon inventory of each shop, and the list of shops you follow (with *Détecter*) |
-| Wishlist | Edit your cards: id, names, number, languages, max price |
+| Boutiques | Pre-orders, restocks and price drops, the full Pokémon inventory of each shop. Add a shop by pasting its address, or with one click from the **Portugal directory** (`shop_directory.json`, pre-filled from a web search). *Tout détecter* checks which shops are supported. |
+| Wishlist | Add cards from the open-source TCGdex catalogue (search by name, filter by set, "secret rares only"), or **import a screenshot** (Pokécardex list, binder, other app): Claude reads the cards and matches them to the catalogue for you to confirm. Then edit languages and max price. |
 | Réglages | Demo mode, Vinted country, Claude API key, Telegram alerts |
+
+The **bell** (top right) is the notification centre: new Vinted matches, pre-orders, restocks and price drops, each with a link. Turn on *Notifications du Mac* in Réglages to also get system notifications while the page is open.
+
+The screenshot import needs an Anthropic API key (Réglages). The catalogue needs no key.
 
 *Auto* (top right) re-runs everything every 15, 30 or 60 minutes while the page is open.
 
