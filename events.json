@@ -1,19 +1,54 @@
 {
-  "_comment": "Card shows in Portugal (buy / sell / trade, no competitive events). Compiled from web sources on 2026-11-24; updated with the app (git pull). Check the official link before going.",
-  "updated": "2026-11-24",
-  "events": [
-    {"date": "2026-05-03", "title": "Coimbra Card Show 2026", "city": "Coimbra",
-     "address": "Rua Dom João III, 3040-193 Coimbra, Portugal", "venue": "Pavilhão Centro de Portugal",
-     "details": "10:00–18:00 · entrada 5 €", "url": "https://www.cardagenda.com/en/evenements/coimbra-card-show-2026-coimbra-20260503"},
-    {"date": "2026-11-28", "title": "Stadium Card Show Lisboa", "city": "Lisboa",
-     "address": "", "venue": "Stadium XL", "details": "~150 mesas · Pokémon, One Piece, Magic, Lorcana, Riftbound, sports cards",
-     "url": "https://stadiumcardshow.com/"},
-    {"date": "2026-12-12", "date_end": "2026-12-13", "title": "Belém Card Show", "city": "Lisboa (Belém)",
-     "address": "Belém, Lisboa, Portugal", "venue": "", "details": "1ª edição · singles, vintage, graded, selados · torneios e giveaways",
-     "url": "https://belemcardshow.com/"},
-    {"date": "2027-05-08", "date_end": "2027-05-09", "title": "Coimbra Card Show 2027", "city": "Coimbra",
-     "address": "Rua das Areias 12, 3025 Coimbra, Portugal", "venue": "Caves de Coimbra",
-     "details": "2 dias · dezenas de expositores · Pokémon, One Piece, Magic, Lorcana, cromos de desporto",
-     "url": "https://coimbracardshow.pt/pt"}
-  ]
+ "_comment": "Card shows in Portugal (buy / sell / trade, no competitive events). Compiled from web sources on 2026-11-24; updated with the app (git pull). Check the official link before going.",
+ "updated": "2026-11-24",
+ "events": [
+  {
+   "date": "2026-05-03",
+   "title": "Coimbra Card Show 2026",
+   "city": "Coimbra",
+   "address": "Rua Dom João III, 3040-193 Coimbra, Portugal",
+   "venue": "Pavilhão Centro de Portugal",
+   "details": "10:00–18:00 · entrada 5 €",
+   "url": "https://www.cardagenda.com/en/evenements/coimbra-card-show-2026-coimbra-20260503"
+  },
+  {
+   "date": "2026-10-31",
+   "date_end": "2026-11-01",
+   "title": "Portugal TCG Show",
+   "city": "Setúbal",
+   "address": "Setúbal, Portugal",
+   "venue": "",
+   "details": "Evento TCG em Setúbal",
+   "url": "https://www.instagram.com/portugaltcgshow/"
+  },
+  {
+   "date": "2026-11-28",
+   "title": "Stadium Card Show Lisboa",
+   "city": "Lisboa",
+   "address": "",
+   "venue": "Stadium XL",
+   "details": "~150 mesas · Pokémon, One Piece, Magic, Lorcana, Riftbound, sports cards",
+   "url": "https://stadiumcardshow.com/"
+  },
+  {
+   "date": "2026-12-12",
+   "date_end": "2026-12-13",
+   "title": "Belém Card Show",
+   "city": "Lisboa (Belém)",
+   "address": "Belém, Lisboa, Portugal",
+   "venue": "",
+   "details": "1ª edição · singles, vintage, graded, selados · torneios e giveaways",
+   "url": "https://belemcardshow.com/"
+  },
+  {
+   "date": "2027-05-08",
+   "date_end": "2027-05-09",
+   "title": "Coimbra Card Show 2027",
+   "city": "Coimbra",
+   "address": "Rua das Areias 12, 3025 Coimbra, Portugal",
+   "venue": "Caves de Coimbra",
+   "details": "2 dias · dezenas de expositores · Pokémon, One Piece, Magic, Lorcana, cromos de desporto",
+   "url": "https://coimbracardshow.pt/pt"
+  }
+ ]
 }

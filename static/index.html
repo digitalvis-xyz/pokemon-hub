@@ -149,6 +149,35 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
 .cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:12px}
 .cand{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .cand b{display:block}.cand span{display:block;font-size:12px;color:var(--muted)}
+.home{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.hcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;min-height:160px}
+.hcard.wide{grid-column:span 3}
+.hh{display:flex;align-items:center;margin-bottom:10px}.hh b{flex:1}.hh a{font-size:13px;color:var(--muted);text-decoration:none}.hh a:hover{color:var(--ink)}
+.hrow{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.hrow:last-child{border-bottom:0}.hrow .grow{flex:1;min-width:0}.hrow .grow div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hrow img{width:38px;height:38px;object-fit:cover;border-radius:6px;background:#efebe3;color:transparent;font-size:0}
+.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.strip .card .img{aspect-ratio:1}
+.onb{background:#fff8e6;border:1px solid #f3dfb0;border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
+.onb ol{margin:8px 0 0;padding-left:20px}.onb li{margin:4px 0}.onb li.done{color:var(--muted);text-decoration:line-through}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:6px 12px;cursor:pointer;font-weight:500;color:var(--muted)}
+.seg button.on{background:var(--ink);color:#fff}
+.wall{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px}
+.wc{position:relative;border-radius:10px;transition:transform .12s}
+.wc:hover{transform:translateY(-3px)}
+.wc img{width:100%;aspect-ratio:63/88;object-fit:cover;border-radius:10px;background:#e9e5dc;display:block;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.wc.owned img{filter:grayscale(.85) opacity(.55)}
+.wc .ph{width:100%;aspect-ratio:63/88;border-radius:10px;background:#e9e5dc;display:grid;place-items:center;text-align:center;padding:10px;font-size:13px;color:var(--muted)}
+.wc .cap{font-size:12px;margin-top:6px;line-height:1.3}.wc .cap b{display:block;font-size:13px}
+.wc .acts{position:absolute;top:8px;right:8px;display:flex;gap:4px;opacity:0;transition:opacity .12s}
+.wc:hover .acts,.wc.owned .acts{opacity:1}
+.wc .acts button{border:0;border-radius:14px;padding:4px 9px;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,.95);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.wc.owned .acts .own{background:var(--ok);color:#fff}
+.wc .price{position:absolute;left:8px;bottom:62px;background:rgba(29,27,24,.85);color:#fff;font-size:11px;font-weight:600;border-radius:6px;padding:2px 6px}
+.relimg{width:56px;height:56px;border-radius:8px;object-fit:cover;flex:none;background:linear-gradient(135deg,#f5d0c8,#e9e1f7);display:grid;place-items:center;font-size:12px;font-weight:700;color:#7a4b6a}
+.cmp td{vertical-align:middle}.cmp img{width:40px;height:40px;object-fit:cover;border-radius:6px;background:#efebe3;color:transparent;font-size:0}
+.cmp tr.best{background:#eefaf2}
 #map{height:600px;border-radius:var(--radius);border:1px solid var(--line);background:#e9e5dc}
 .legend{display:flex;gap:14px;align-items:center;font-size:13px;color:var(--muted);margin:10px 0}
 .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px}
@@ -162,6 +191,7 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
 .bar{gap:10px}
 pre.diag{background:#1d1b18;color:#e9e4d8;font:12px/1.5 ui-monospace,Menlo,monospace;padding:12px;border-radius:10px;max-height:360px;overflow:auto;white-space:pre-wrap}
 textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:8px;padding:10px;width:100%;min-height:220px}
+@media (max-width:1000px){.home{grid-template-columns:1fr}.hcard.wide{grid-column:span 1}.maplay{grid-template-columns:1fr}}
 @media (max-width:760px){nav{margin-left:0;overflow:auto}.bar{flex-wrap:wrap}.form{grid-template-columns:1fr}.form .hint{grid-column:1}}
 </style>
 </head>
@@ -170,11 +200,12 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
   <div class="bar">
     <div class="logo"><span class="ball"></span>TCG Hub</div>
     <nav id="nav">
-      <button data-v="deals" class="on">Bons plans <span class="count" id="c-deals" hidden></span></button>
-      <button data-v="shops">Boutiques <span class="count" id="c-shops" hidden></span></button>
-      <button data-v="map">Carte</button>
-      <button data-v="releases">Sorties</button>
+      <button data-v="home" class="on">Accueil</button>
       <button data-v="wishlist">Wishlist</button>
+      <button data-v="deals">Vinted <span class="count" id="c-deals" hidden></span></button>
+      <button data-v="shops">Boutiques <span class="count" id="c-shops" hidden></span></button>
+      <button data-v="releases">Agenda</button>
+      <button data-v="map">Carte</button>
       <button data-v="settings">Réglages</button>
     </nav>
     <div class="spacer"></div>
@@ -199,9 +230,23 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
 
 <main>
   <!-- DEALS -->
-  <section class="view on" id="v-deals">
+  <section class="view on" id="v-home">
+    <div class="tools"><div style="margin-right:auto"><h2 id="hello">Bonjour</h2><span class="meta" id="homeSub"></span></div>
+</div>
+    <div id="onboard"></div>
+    <div class="home">
+      <div class="hcard wide"><div class="hh"><b>Meilleures offres Vinted</b><a href="#" data-go="deals">Tout voir →</a></div><div id="hDeals"></div></div>
+      <div class="hcard"><div class="hh"><b>Nouveautés boutiques</b><a href="#" data-go="shops">Tout voir →</a></div><div id="hShops"></div></div>
+      <div class="hcard"><div class="hh"><b>Prochaines sorties</b><a href="#" data-go="releases">Agenda →</a></div><div id="hRels"></div></div>
+      <div class="hcard"><div class="hh"><b>Prochain card show</b><a href="#" data-go="map">Carte →</a></div><div id="hShow"></div></div>
+      <div class="hcard"><div class="hh"><b>Ma wishlist</b><a href="#" data-go="wishlist">Ouvrir →</a></div><div id="hWl"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-deals">
     <div class="tools">
       <h2 style="margin-right:auto">Vinted × ta wishlist</h2>
+      <button class="btn" id="clearVinted" title="Efface les résultats et l'historique « déjà vu »">Vider les résultats</button>
       <button class="btn" id="pickBtn">Choisir les cartes…</button>
       <button class="btn primary" id="searchSel">Chercher sur Vinted</button>
     </div>
@@ -231,13 +276,22 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
   <!-- SHOPS -->
   <section class="view" id="v-shops">
     <div class="tools">
-      <h2 style="margin-right:auto">Boutiques en ligne</h2>
-      <button class="btn" data-run="shops">Vérifier les boutiques</button>
+      <h2 style="margin-right:auto">Boutiques</h2>
+      <button class="btn primary" data-run="shops">Vérifier les boutiques</button>
     </div>
+    <div class="subtabs" id="shopTabs"><button class="on" data-sh="news">Nouveautés</button><button data-sh="cmp">Comparateur de prix</button><button data-sh="stock">Stock</button><button data-sh="mine">Mes boutiques</button></div>
+    <div id="sh-news">
+    <p class="sub">Ce qui a changé depuis la dernière vérification dans tes boutiques suivies : précommandes, retours en stock, nouveautés, baisses de prix.</p>
     <div class="shopsum" id="shopSum"></div>
-    <h3>Changements récents</h3>
     <div class="panel" id="events"></div>
-    <h3>Inventaire Pokémon</h3>
+    </div>
+    <div id="sh-cmp" hidden>
+      <p class="sub">Cherche un produit : l'app interroge en direct toutes tes boutiques suivies et classe les offres (en stock d'abord, puis par prix).</p>
+      <div class="tools"><input type="text" id="cmpQ" placeholder="ex. ETB Poings Fluides, display 151, coffret Dracaufeu" style="width:420px"><button class="btn primary" id="cmpGo">Comparer</button><span class="meta" id="cmpInfo"></span></div>
+      <div id="cmpRes"></div>
+    </div>
+    <div id="sh-stock" hidden>
+    <p class="sub">Tous les produits Pokémon vus lors de la dernière vérification.</p>
     <div class="tools">
       <input type="text" id="invSearch" placeholder="Rechercher (ex. ETB, display, 151…)" style="width:280px">
       <label class="toggle"><input type="checkbox" id="invStock"> En stock</label>
@@ -246,7 +300,9 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
     </div>
     <div class="panel"><table><thead><tr><th>Boutique</th><th>Produit</th><th>Prix</th><th>Stock</th><th></th></tr></thead><tbody id="inv"></tbody></table></div>
     <div class="foot" id="shopsFoot"></div>
-    <h3>Ajouter une boutique</h3>
+    </div>
+    <div id="sh-mine" hidden>
+    <h3 style="margin-top:4px">Ajouter une boutique</h3>
     <div class="tools"><input type="text" id="qaUrl" placeholder="Nom, site web ou adresse — ex. « Versus Gamecenter », « versusgamecenter.pt »" style="width:460px"><button class="btn primary" id="qaGo">Chercher</button><span class="meta" id="qaInfo">Une seule info suffit : on complète le reste.</span></div>
     <div class="cands" id="cands"></div>
     <h3>Annuaire Portugal <span class="meta" style="font-weight:400">· pré-rempli par recherche web, à affiner ensemble</span></h3>
@@ -258,6 +314,7 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
     <p class="sub">Magasins physiques, sites non compatibles ou injoignables : ils restent dans ta liste et sur la carte. « Détecter » re-teste le site.</p>
     <div class="panel"><table><thead><tr><th style="width:18%">Nom</th><th>URL</th><th style="width:22%">Adresse (pour la carte)</th><th style="width:110px">Ville</th><th style="width:110px">État</th><th style="width:170px"></th></tr></thead><tbody id="shopList2"></tbody></table></div>
     <div class="tools" style="margin-top:10px"><button class="btn" id="addShop">+ Ligne vide</button><button class="btn" id="detectAll">Tout détecter</button><button class="btn primary" id="saveShops">Enregistrer</button></div>
+    </div>
   </section>
 
   <!-- WISHLIST -->
@@ -272,20 +329,48 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
   </section>
 
   <section class="view" id="v-releases">
-    <div class="tools"><h2 style="margin-right:auto">Prochaines sorties</h2>
+    <div class="tools"><h2 style="margin-right:auto">Agenda</h2>
       <span class="chip on" data-rk="products">Produits</span><span class="chip" data-rk="shows">Card shows Portugal</span>
       <select id="relRegion"><option value="">Toutes les régions</option><option value="FR">France</option><option value="EN">Anglais</option><option value="JP">Japon</option></select>
       <label class="toggle"><input type="checkbox" id="relPast"> Afficher les sorties passées</label>
+      <button class="btn" id="agAddBtn">+ Ajouter</button>
+      <button class="btn" id="agSrcBtn">Sources & mise à jour</button>
       <a class="btn" href="/calendar.ics" download="sorties-pokemon.ics">Télécharger (.ics)</a></div>
+    <div class="picker" id="agAdd" hidden>
+      <b>Ajouter à l'agenda</b>
+      <div class="form" style="border:0;padding:12px 0 0;max-width:none;grid-template-columns:160px 1fr 160px 1fr">
+        <label>Type</label><select id="ag-kind"><option value="show">Card show (Portugal)</option><option value="release">Sortie produit</option></select>
+        <label>Titre</label><input type="text" id="ag-title" placeholder="ex. Porto Card Show">
+        <label>Date</label><input type="date" id="ag-date">
+        <label>Fin (facultatif)</label><input type="date" id="ag-end">
+        <label>Ville / région</label><input type="text" id="ag-city" placeholder="Porto · ou FR / EN / JP pour une sortie">
+        <label>Adresse</label><input type="text" id="ag-addr" placeholder="facultatif (pour la carte)">
+        <label>Lien</label><input type="url" id="ag-url" placeholder="https://…">
+        <label>Image (URL)</label><input type="url" id="ag-img" placeholder="facultatif : photo du produit">
+      </div>
+      <div class="tools" style="margin:10px 0 0"><button class="btn primary" id="agSave">Ajouter</button><span class="meta">Les ajouts restent sur ton Mac (data/agenda_user.json).</span></div>
+    </div>
+    <div class="picker" id="agSrc" hidden>
+      <div class="tools" style="margin:0"><b style="margin-right:auto">Sources lues automatiquement</b><button class="btn primary" data-run="agenda">Mettre à jour maintenant</button></div>
+      <p class="meta">L'app lit les événements publiés dans ces pages (données schema.org « Event », que beaucoup de sites d'événements et de calendriers intègrent). Ajoute la page d'un salon, d'un agenda ou d'un calendrier de sorties.</p>
+      <div id="agSrcList"></div>
+      <div class="tools" style="margin:8px 0 0"><input type="url" id="agSrcUrl" placeholder="https://… page à lire" style="width:360px"><select id="agSrcKind"><option value="show">Card shows</option><option value="release">Sorties produits</option></select><button class="btn" id="agSrcAdd">Ajouter la source</button></div>
+      <p class="meta" id="agSrcInfo"></p>
+    </div>
     <p class="sub" id="relInfo"></p>
     <div id="rels"></div>
     <p class="meta">Pour l'avoir dans Calendrier sur Mac : Fichier → Nouvel abonnement à un calendrier → <code>http://127.0.0.1:8765/calendar.ics</code> (mis à jour tant que l'app tourne), ou ouvre le fichier .ics téléchargé.</p>
   </section>
 
   <section class="view" id="v-wishlist">
-    <h2>Wishlist</h2>
-    <p class="sub">Chaque carte a un identifiant unique (catalogue open source TCGdex) : c'est lui qui relie Vinted, les boutiques et bientôt les prix.</p>
-    <div class="adder">
+    <div class="tools"><h2 style="margin-right:auto">Wishlist</h2>
+      <input type="text" id="wlQ" placeholder="Filtrer (nom, numéro, extension)" style="width:220px">
+      <span class="chip on" data-wf="want">À chercher<span class="n" id="n-want"></span></span>
+      <span class="chip" data-wf="owned">Je l'ai<span class="n" id="n-owned"></span></span>
+      <span class="chip" data-wf="all">Tout</span>
+      <span class="seg"><button class="on" data-wv="wall">Mur</button><button data-wv="table">Tableau</button></span>
+      <button class="btn primary" id="toggleAdder">+ Ajouter des cartes</button></div>
+    <div class="adder" id="adder" hidden>
       <div class="subtabs"><button class="on" data-st="cat">Rechercher dans le catalogue</button><button data-st="shot">Importer une capture (Pokécardex…)</button><button data-st="text">Coller une liste</button></div>
       <div id="st-cat">
         <div class="tools" style="margin:0">
@@ -315,11 +400,13 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
         <div id="textRes"></div>
       </div>
     </div>
-    <h3>Ma wishlist</h3>
-    <div class="panel" style="overflow:auto"><table style="min-width:1050px">
-      <thead><tr><th></th><th>Id</th><th>Nom FR</th><th>Nom EN</th><th>Extension</th><th style="width:84px">Code</th><th style="width:70px">N°</th><th style="width:70px">Total</th><th>Langues</th><th style="width:90px">Prix max €</th><th>Gradée</th><th>Lots</th><th></th></tr></thead>
+    <div id="wall" class="wall"></div>
+    <div id="wlTable" hidden>
+    <div class="panel" style="overflow:auto"><table style="min-width:1100px">
+      <thead><tr><th></th><th title="Je l'ai">✓</th><th>Id</th><th>Nom FR</th><th>Nom EN</th><th>Extension</th><th style="width:84px">Code</th><th style="width:70px">N°</th><th style="width:70px">Total</th><th>Langues</th><th style="width:90px">Prix max €</th><th>Gradée</th><th>Lots</th><th></th></tr></thead>
       <tbody id="wl"></tbody></table></div>
     <div class="tools" style="margin-top:10px"><button class="btn" id="addCard">+ Ajouter une carte</button><button class="btn primary" id="saveWl">Enregistrer</button></div>
+    </div>
   </section>
 
   <!-- SETTINGS -->
@@ -401,7 +488,7 @@ $("#demo").onclick = () => show("settings");
 async function load() {
   S = await api("/api/state");
   renderHeader(); renderDeals(); renderShops(); renderWishlist(); renderSettings(); renderJob(S.job);
-  loadNotifs(); loadDirectory(); renderProfile(); updateSearchBtn();
+  loadNotifs(); loadDirectory(); renderProfile(); updateSearchBtn(); renderHome();
 }
 function renderHeader() {
   $("#demo").hidden = !S.settings.demo_mode;
@@ -537,10 +624,12 @@ $("#saveShops").onclick = async () => {
 let wl = [];
 const LANGS = ["fr", "en", "ja", "pt"];
 function renderWishlist() {
+  if (!wl._loaded && !(S.wishlist || []).length) $("#adder").hidden = false;
   if (!wl._loaded) { wl = (S.wishlist || []).map(c => ({...c})); wl._loaded = true; }
   const txt = (c, i, k, w) => `<input type="text" data-i="${i}" data-k="${k}" value="${esc(c[k])}" ${w ? `style="width:${w}px"` : ""}>`;
   $("#wl").innerHTML = wl.map((c, i) => `<tr>
     <td>${c.image ? `<img class="thumb" src="${safeUrl(c.image.replace("/high.", "/low."))}" alt="" loading="lazy">` : ""}</td>
+    <td><input type="checkbox" data-i="${i}" data-b="owned" title="Je l'ai" ${c.owned ? "checked" : ""}></td>
     <td>${txt(c, i, "id")}</td><td>${txt(c, i, "name_fr")}</td><td>${txt(c, i, "name_en")}</td><td>${txt(c, i, "set_name")}</td>
     <td>${txt(c, i, "set_code")}</td><td>${txt(c, i, "number")}</td><td>${txt(c, i, "set_total")}</td>
     <td class="langs">${LANGS.map(l => `<label><input type="checkbox" data-i="${i}" data-lang="${l}" ${(c.languages || []).includes(l) ? "checked" : ""}> ${l}</label>`).join("")}</td>
@@ -548,13 +637,14 @@ function renderWishlist() {
     <td><input type="checkbox" data-i="${i}" data-b="allow_graded" ${c.allow_graded ? "checked" : ""}></td>
     <td><input type="checkbox" data-i="${i}" data-b="allow_lots" ${c.allow_lots ? "checked" : ""}></td>
     <td><button class="btn small" data-del="${i}">✕</button></td></tr>`).join("")
-    || `<tr><td colspan="13" style="color:var(--muted)">Wishlist vide. Ajoute des cartes depuis le catalogue ou une capture d'écran.</td></tr>`;
+    || `<tr><td colspan="14" style="color:var(--muted)">Wishlist vide. Ajoute des cartes depuis le catalogue ou une capture d'écran.</td></tr>`;
   $$("#wl input[data-k]").forEach(inp => inp.oninput = () => { wl[inp.dataset.i][inp.dataset.k] = inp.type === "number" ? (inp.value === "" ? null : +inp.value) : inp.value; });
   $$("#wl input[data-lang]").forEach(inp => inp.onchange = () => {
     const c = wl[inp.dataset.i]; c.languages = LANGS.filter(l => $(`#wl input[data-i="${inp.dataset.i}"][data-lang="${l}"]`).checked);
   });
   $$("#wl input[data-b]").forEach(inp => inp.onchange = () => { wl[inp.dataset.i][inp.dataset.b] = inp.checked; });
   $$("#wl [data-del]").forEach(b => b.onclick = () => { wl.splice(+b.dataset.del, 1); renderWishlist(); });
+  renderWall();
 }
 $("#addCard").onclick = () => { wl.push({id: "", name_fr: "", name_en: "", set_name: "", set_code: "", number: "", set_total: "", languages: ["fr"], max_price: null, allow_graded: false, allow_lots: false}); renderWishlist(); };
 $("#saveWl").onclick = async () => {
@@ -600,7 +690,7 @@ function renderJob(j) {
   const busy = j && j.running;
   if (busy) statusDismissed = false;
   $("#status").classList.toggle("show", !statusDismissed && (!!busy || !!(j && j.error)));
-  $("#statusText").textContent = busy ? `En cours : ${({vinted: "recherche Vinted", shops: "vérification des boutiques", all: "actualisation complète", detect: "détection des boutiques", diag: "diagnostic"})[j.kind] || j.kind}… ${(j.log || []).slice(-1)[0] || ""}`
+  $("#statusText").textContent = busy ? `En cours : ${({vinted: "recherche Vinted", shops: "vérification des boutiques", all: "actualisation complète", detect: "détection des boutiques", diag: "diagnostic", agenda: "mise à jour de l'agenda"})[j.kind] || j.kind}… ${(j.log || []).slice(-1)[0] || ""}`
     : (j && j.error ? "Erreur : " + j.error : "");
   $(".spin").style.display = busy ? "" : "none";
   $("#stopBtn").style.display = busy ? "" : "none";
@@ -616,7 +706,7 @@ function poll() {
   polling = setInterval(async () => {
     const j = await api("/api/job");
     renderJob(j);
-    if (!j.running) { clearInterval(polling); if (j.kind === "detect") shopRows._loaded = false; if (j.kind === "diag") loadDiag(); await load(); if (!j.error) toast("Terminé"); }
+    if (!j.running) { clearInterval(polling); if (j.kind === "detect") shopRows._loaded = false; if (j.kind === "diag") loadDiag(); if (j.kind === "agenda") { RELS = null; EVTS = null; loadReleases(); renderSources(); } await load(); if (!j.error) toast("Terminé"); }
   }, 1000);
 }
 // auto refresh while the page is open
@@ -899,16 +989,142 @@ $("#parseList").onclick = async () => {
   $("#parseList").disabled = false;
 };
 
+// ---------- home ----------
+async function renderHome() {
+  const p = S.profile || {}, wlAll = S.wishlist || [], want = wlAll.filter(c => !c.owned);
+  $("#hello").textContent = "Bonjour " + (p.name && p.name !== "Moi" ? p.name : "");
+  $("#homeSub").textContent = S.vinted.at ? `Vinted vérifié ${ago(S.vinted.at)} · boutiques vérifiées ${ago((S.shops_result || {}).at)}` : "Commence par les étapes ci-dessous.";
+  const tracked = (S.shops || []).filter(x => ["shopify", "woocommerce"].includes(x.engine)).length;
+  const steps = [
+    [wlAll.length > 0, "Ajoute les cartes que tu cherches", "wishlist"],
+    [!!p.city, "Indique ta ville (pour la carte)", "settings"],
+    [tracked > 0, "Ajoute au moins une boutique compatible", "shops"],
+    [!!S.vinted.at, "Lance une première recherche Vinted", "deals"],
+  ];
+  $("#onboard").innerHTML = steps.every(x => x[0]) ? "" : `<div class="onb"><b>Pour démarrer</b> <span class="meta">${steps.filter(x => x[0]).length}/${steps.length}</span><ol>${steps.map(([ok, t, v]) => `<li class="${ok ? "done" : ""}">${ok ? t : `<a href="#" data-go2="${v}">${t}</a>`}</li>`).join("")}</ol></div>`;
+  $$("[data-go2]").forEach(a => a.onclick = e => { e.preventDefault(); $(`#nav [data-v="${a.dataset.go2}"]`).click(); if (a.dataset.go2 === "wishlist") { $("#adder").hidden = false; } });
+  // deals: best ratio first, one per card
+  const seen = new Set(), best = (S.vinted.rows || []).filter(r => r.verdict === "match").sort((a, b) => (a.deal_ratio ?? 9) - (b.deal_ratio ?? 9)).filter(r => !seen.has(r.card_id) && seen.add(r.card_id)).slice(0, 6);
+  $("#hDeals").innerHTML = best.length ? '<div class="strip">' + best.map(dealCard).join("") + "</div>" : `<p class="meta">Pas encore d'offre. ${want.length ? '<a href="#" onclick="searchVinted();return false">Lancer une recherche Vinted</a>' : "Ajoute d'abord des cartes à ta wishlist."}</p>`;
+  const evs = ((S.shops_result || {}).history || (S.shops_result || {}).events || []).filter(e => e.verdict === "match").slice(0, 5);
+  $("#hShops").innerHTML = evs.length ? evs.map(e => `<div class="hrow"><img src="${safeUrl(e.image)}" alt="" onerror="this.removeAttribute('src')"><div class="grow"><div><b>${esc(e.title)}</b></div><div class="meta">${esc((EV[e.event] || ["", e.event])[1])} · ${esc(e.shop)}</div></div><b>${eur(e.price)}</b></div>`).join("") : '<p class="meta">Rien de neuf pour l\'instant.</p>';
+  try {
+    if (!RELS) RELS = await api("/api/releases");
+    if (!EVTS) EVTS = await api("/api/events");
+    const today = new Date().toISOString().slice(0, 10);
+    const rels = RELS.releases.filter(r => (r.date_end || r.date) >= today.slice(0, r.date.length)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
+    $("#hRels").innerHTML = rels.map(r => `<div class="hrow"><div class="grow"><div><b>${esc(r.title)}</b></div><div class="meta">${esc(r.region)} · ${esc(r.status)}</div></div><span class="meta">${r.date.length === 10 ? new Date(r.date + "T12:00:00").toLocaleDateString("fr-FR", {day: "numeric", month: "short"}) : esc(r.date)}</span></div>`).join("") || '<p class="meta">Rien d\'annoncé.</p>';
+    const show = EVTS.events.filter(e => (e.date_end || e.date) >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
+    $("#hShow").innerHTML = show ? `<div style="font-size:26px;font-weight:700">${new Date(show.date + "T12:00:00").toLocaleDateString("fr-FR", {day: "numeric", month: "long"})}</div><b>${esc(show.title)}</b><p class="meta">${esc(show.venue || "")} ${esc(show.city || "")}<br>${esc(show.details || "")}</p>${show.url ? `<a class="btn small" href="${safeUrl(show.url)}" target="_blank" rel="noopener">Site</a>` : ""}` : '<p class="meta">Aucun card show à venir connu.</p>';
+  } catch (_) {}
+  $("#hWl").innerHTML = `<p><b>${want.length}</b> à chercher · <b>${wlAll.length - want.length}</b> « je l'ai »</p><div style="display:flex;gap:6px;flex-wrap:wrap">${want.filter(c => c.image).slice(0, 8).map(c => `<img src="${safeUrl(c.image.replace("/high.", "/low."))}" alt="" style="width:44px;border-radius:4px">`).join("")}</div>`;
+}
+
+// ---------- vinted: clear ----------
+$("#clearVinted").onclick = async () => {
+  if (!confirm("Effacer tous les résultats Vinted de ce profil ? (les annonces redeviendront « nouvelles » à la prochaine recherche)")) return;
+  await api("/api/vinted/clear", {}); toast("Résultats effacés"); await load();
+};
+
+// ---------- wishlist wall ----------
+let WF = "want", WV = "wall";
+try { WV = localStorage.getItem("wv") || "wall"; } catch (_) {}
+function renderWall() {
+  const q = ($("#wlQ").value || "").toLowerCase();
+  $("#n-want").textContent = wl.filter(c => !c.owned).length; $("#n-owned").textContent = wl.filter(c => c.owned).length;
+  $("#wall").hidden = WV !== "wall"; $("#wlTable").hidden = WV !== "table";
+  $$("[data-wv]").forEach(b => b.classList.toggle("on", b.dataset.wv === WV));
+  if (WV !== "wall") return;
+  const list = wl.map((c, i) => ({c, i})).filter(({c}) => (WF === "all" || (WF === "owned" ? c.owned : !c.owned)) &&
+    (!q || ((c.name_fr || "") + " " + (c.name_en || "") + " " + c.number + " " + (c.set_name || "")).toLowerCase().includes(q)));
+  $("#wall").innerHTML = list.map(({c, i}) => `<div class="wc ${c.owned ? "owned" : ""}">
+      ${c.image ? `<img src="${safeUrl(c.image)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=ph>${esc((c.name_fr || c.name_en || "").replace(/'/g, ""))}</div>'">` : `<div class="ph">${esc(c.name_fr || c.name_en)}<br>${esc(c.number)}/${esc(c.set_total || "?")}</div>`}
+      ${c.max_price ? `<span class="price">max ${eur(c.max_price)}</span>` : ""}
+      <div class="acts"><button class="own" data-own="${i}">${c.owned ? "✓ Je l'ai" : "Je l'ai"}</button><button data-vs="${i}" title="Chercher sur Vinted">Vinted</button><button data-rm="${i}" title="Retirer">✕</button></div>
+      <div class="cap"><b>${esc(c.name_fr || c.name_en)}</b><span class="meta">${esc(c.number)}/${esc(c.set_total || "?")} · ${esc(c.set_name || "")}</span></div></div>`).join("")
+    || `<div class="empty" style="grid-column:1/-1">${wl.length ? "Rien dans ce filtre." : "Ta wishlist est vide."} <br><br><button class="btn primary" onclick="$('#adder').hidden=false;loadSets()">+ Ajouter des cartes</button></div>`;
+  $$("#wall [data-own]").forEach(b => b.onclick = async () => {
+    const c = wl[+b.dataset.own]; c.owned = !c.owned;
+    await api("/api/wishlist/owned", {id: c.id, owned: c.owned});
+    const sc = (S.wishlist || []).find(x => x.id === c.id); if (sc) sc.owned = c.owned;
+    toast(c.owned ? "Marquée « je l'ai » : plus cherchée sur Vinted" : "Remise dans « à chercher »"); renderWall(); updateSearchBtn();
+  });
+  $$("#wall [data-vs]").forEach(b => b.onclick = () => { const c = wl[+b.dataset.vs]; show("deals"); searchVinted([c.id]); });
+  $$("#wall [data-rm]").forEach(b => b.onclick = async () => {
+    const c = wl[+b.dataset.rm]; if (!confirm(`Retirer ${c.name_fr || c.name_en} ${c.number} de la wishlist ?`)) return;
+    wl.splice(+b.dataset.rm, 1); await api("/api/wishlist", {cards: wl}); S.wishlist = wl.map(x => ({...x})); renderWishlist(); toast("Carte retirée");
+  });
+}
+$$("[data-wf]").forEach(c => c.onclick = () => { WF = c.dataset.wf; $$("[data-wf]").forEach(x => x.classList.toggle("on", x === c)); renderWall(); });
+$$("[data-wv]").forEach(b => b.onclick = () => { WV = b.dataset.wv; try { localStorage.setItem("wv", WV); } catch (_) {} renderWall(); });
+$("#wlQ").oninput = renderWall;
+$("#toggleAdder").onclick = () => { $("#adder").hidden = !$("#adder").hidden; if (!$("#adder").hidden) { loadSets(); $("#adder").scrollIntoView({behavior: "smooth", block: "start"}); } };
+
+// ---------- shops sub-tabs + comparator ----------
+$$("[data-sh]").forEach(b => b.onclick = () => {
+  $$("[data-sh]").forEach(x => x.classList.toggle("on", x === b));
+  ["news", "cmp", "stock", "mine"].forEach(k => $("#sh-" + k).hidden = b.dataset.sh !== k);
+});
+async function runCompare() {
+  const q = $("#cmpQ").value.trim(); if (q.length < 2) return;
+  $("#cmpGo").disabled = true; $("#cmpInfo").textContent = "Recherche dans tes boutiques…"; $("#cmpRes").innerHTML = "";
+  try {
+    const r = await api("/api/shops/compare", {q});
+    $("#cmpInfo").textContent = `${r.results.length} offre(s) dans ${r.shops_searched} boutique(s) suivie(s)` + (r.errors.length ? ` · ${r.errors.length} boutique(s) n'ont pas répondu` : "");
+    $("#cmpRes").innerHTML = r.shops_searched === 0 ? '<div class="empty">Aucune boutique compatible suivie : ajoute-en dans « Mes boutiques ».</div>'
+      : r.results.length ? `<div class="panel"><table class="cmp"><thead><tr><th></th><th>Produit</th><th>Boutique</th><th>Prix</th><th>Stock</th><th></th></tr></thead><tbody>${r.results.map(x => `<tr class="${x.best ? "best" : ""}">
+        <td><img src="${safeUrl(x.image)}" alt="" onerror="this.removeAttribute('src')"></td><td>${esc(x.title)} ${x.best ? '<span class="b ok">meilleur prix</span>' : ""}</td><td>${esc(x.shop)}</td>
+        <td><b>${eur(x.price)}</b></td><td>${x.available ? '<span class="b ok">En stock</span>' : '<span class="b bad">Épuisé</span>'}</td>
+        <td><a class="btn small" href="${safeUrl(x.url)}" target="_blank" rel="noopener">Voir</a></td></tr>`).join("")}</tbody></table></div>`
+      : '<div class="empty">Aucune boutique n\'a ce produit. Essaie moins de mots (ex. « ETB 151 »).</div>';
+  } catch (e) { $("#cmpInfo").textContent = e.message; }
+  $("#cmpGo").disabled = false;
+}
+$("#cmpGo").onclick = runCompare; $("#cmpQ").onkeydown = e => { if (e.key === "Enter") runCompare(); };
+
+// ---------- agenda: add, delete, sources ----------
+function agDel(x) {
+  return x.origin && x.origin !== "curated" ? `<button class="btn small" data-agdel-id="${esc(x.id)}" title="Supprimer">✕</button>`
+    : `<button class="btn small" data-agdel-t="${esc(x.title)}" data-agdel-d="${esc(x.date)}" title="Masquer">✕</button>`;
+}
+function bindAgDel() {
+  $$("[data-agdel-id]").forEach(b => b.onclick = async () => { await api("/api/agenda/remove", {id: b.dataset.agdelId}); RELS = null; EVTS = null; loadReleases(); });
+  $$("[data-agdel-t]").forEach(b => b.onclick = async () => { if (!confirm("Masquer cet élément ?")) return; await api("/api/agenda/remove", {title: b.dataset.agdelT, date: b.dataset.agdelD}); RELS = null; EVTS = null; loadReleases(); });
+}
+$("#agAddBtn").onclick = () => { $("#agAdd").hidden = !$("#agAdd").hidden; $("#ag-kind").value = RKIND === "shows" ? "show" : "release"; };
+$("#agSave").onclick = async () => {
+  const kind = $("#ag-kind").value, city = $("#ag-city").value.trim();
+  const body = {kind, title: $("#ag-title").value.trim(), date: $("#ag-date").value, date_end: $("#ag-end").value || null,
+    url: $("#ag-url").value.trim(), image: $("#ag-img").value.trim(), address: $("#ag-addr").value.trim()};
+  if (kind === "show") body.city = city; else body.region = (city || "FR").toUpperCase().slice(0, 2);
+  try { await api("/api/agenda/add", body); toast("Ajouté à l'agenda"); $("#agAdd").hidden = true; ["#ag-title", "#ag-date", "#ag-end", "#ag-url", "#ag-img", "#ag-addr", "#ag-city"].forEach(i => $(i).value = "");
+    RELS = null; EVTS = null; mapLoaded = false; RKIND = kind === "show" ? "shows" : "products"; $$("[data-rk]").forEach(x => x.classList.toggle("on", x.dataset.rk === RKIND)); loadReleases(); }
+  catch (e) { toast(e.message); }
+};
+let SRCS = [];
+async function renderSources() {
+  const d = await api("/api/events"); SRCS = d.sources || [];
+  $("#agSrcList").innerHTML = SRCS.map((x, i) => `<div class="hrow"><span class="b">${x.kind === "release" ? "sorties" : "card shows"}</span><div class="grow"><div><a href="${safeUrl(x.url)}" target="_blank" rel="noopener">${esc(x.url)}</a></div></div><button class="btn small" data-srcdel="${i}">Retirer</button></div>`).join("");
+  const lr = d.last_refresh;
+  $("#agSrcInfo").textContent = lr ? `Dernière lecture ${ago(lr.at)} : ` + lr.report.map(r => `${r.url.replace(/^https?:\/\/(www\.)?/, "").split("/")[0]} ${r.status === 200 ? `${r.found} lus / ${r.added} ajoutés` : "erreur " + r.status}`).join(" · ") : "Pas encore lu.";
+  $$("[data-srcdel]").forEach(b => b.onclick = async () => { SRCS.splice(+b.dataset.srcdel, 1); await api("/api/agenda/sources", {sources: SRCS}); renderSources(); });
+}
+$("#agSrcBtn").onclick = () => { $("#agSrc").hidden = !$("#agSrc").hidden; if (!$("#agSrc").hidden) renderSources(); bindRunButtons(); };
+$("#agSrcAdd").onclick = async () => {
+  const url = $("#agSrcUrl").value.trim(); if (!/^https?:\/\//.test(url)) return toast("Adresse invalide");
+  SRCS.push({url, kind: $("#agSrcKind").value}); await api("/api/agenda/sources", {sources: SRCS}); $("#agSrcUrl").value = ""; renderSources(); toast("Source ajoutée : clique « Mettre à jour maintenant »");
+};
+
 // ---------- Vinted: choose which cards to search ----------
 let VSEL = null; try { VSEL = JSON.parse(localStorage.getItem("vsel") || "null"); } catch (_) {}
 function saveVsel() { try { localStorage.setItem("vsel", JSON.stringify(VSEL)); } catch (_) {} updateSearchBtn(); }
 function updateSearchBtn() {
-  const all = (S.wishlist || []).length, n = VSEL ? VSEL.filter(id => (S.wishlist || []).some(c => c.id === id)).length : all;
+  const all = (S.wishlist || []).filter(c => !c.owned).length, n = VSEL ? VSEL.filter(id => (S.wishlist || []).some(c => c.id === id && !c.owned)).length : all;
   $("#searchSel").textContent = VSEL && n < all ? `Chercher sur Vinted (${n}/${all} cartes)` : `Chercher sur Vinted (${all} cartes)`;
 }
 function renderPicker() {
   const q = ($("#pickQ").value || "").toLowerCase();
-  const cards = (S.wishlist || []).filter(c => !q || ((c.name_fr || "") + " " + (c.name_en || "") + " " + c.number + " " + (c.set_name || "")).toLowerCase().includes(q));
+  const cards = (S.wishlist || []).filter(c => !c.owned).filter(c => !q || ((c.name_fr || "") + " " + (c.name_en || "") + " " + c.number + " " + (c.set_name || "")).toLowerCase().includes(q));
   $("#pickList").innerHTML = cards.map(c => `<label><input type="checkbox" value="${esc(c.id)}" ${!VSEL || VSEL.includes(c.id) ? "checked" : ""}> ${esc(c.name_fr || c.name_en)} <span class="meta">${esc(c.number)}/${esc(c.set_total || "?")} · ${esc(c.set_name || "")}</span></label>`).join("") || '<span class="meta">Aucune carte.</span>';
   $$("#pickList input").forEach(i => i.onchange = () => {
     const ids = new Set(VSEL || (S.wishlist || []).map(c => c.id));
@@ -970,9 +1186,11 @@ async function renderShows() {
       <div class="g"><b>${esc(e.title)}</b><span>${esc([e.venue, e.address || e.city].filter(Boolean).join(" · "))}</span><span>${esc(e.details || "")}</span></div>
       <span class="b" style="background:#efe8fb;color:#5b3aa0;border-color:transparent">card show</span>
       <a class="btn small" href="${gmaps}" target="_blank" rel="noopener">Itinéraire</a>
-      ${e.url ? `<a class="btn small" href="${safeUrl(e.url)}" target="_blank" rel="noopener">Site</a>` : ""}</div>`;
+      ${e.url ? `<a class="btn small" href="${safeUrl(e.url)}" target="_blank" rel="noopener">Site</a>` : ""}
+      ${e.origin && e.origin !== "curated" ? `<span class="b">${esc(e.origin)}</span>` : ""}${agDel(e)}</div>`;
   });
-  $("#rels").innerHTML = html || '<div class="empty">Aucun card show à venir dans la liste.</div>';
+  $("#rels").innerHTML = html || '<div class="empty">Aucun card show à venir dans la liste. Ajoute-en un, ou ajoute une source à lire.</div>';
+  bindAgDel();
 }
 
 // ---------- map ----------
@@ -1031,12 +1249,15 @@ async function loadReleases() {
     const month = d.toLocaleDateString("fr-FR", {month: "long", year: "numeric"});
     if (month !== cur) { html += `<div class="month">${month}</div>`; cur = month; }
     const isPast = (r.date_end || r.date) < today.slice(0, r.date.length);
-    html += `<div class="rel ${isPast ? "past" : ""}"><div class="d"><b>${r.date.length === 10 ? d.getDate() : "?"}</b><span>${d.toLocaleDateString("fr-FR", {month: "short"})}</span></div>
+    const initials = (r.title.match(/\(([A-Z0-9.]{2,6})\)/) || [])[1] || r.title.split(/\s+/).filter(w => /^[A-ZÉ]/.test(w)).slice(0, 2).map(w => w[0]).join("");
+    html += `<div class="rel ${isPast ? "past" : ""}">${r.image ? `<img class="relimg" src="${safeUrl(r.image)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'relimg',textContent:'${esc(initials)}'}))">` : `<div class="relimg">${esc(initials)}</div>`}<div class="d"><b>${r.date.length === 10 ? d.getDate() : "?"}</b><span>${d.toLocaleDateString("fr-FR", {month: "short"})}</span></div>
       <div class="g"><b>${esc(r.title)}</b><span>${esc(r.products || "")}${r.date_end ? " · jusqu'au " + new Date(r.date_end + "T12:00:00").toLocaleDateString("fr-FR", {day: "numeric", month: "long"}) : ""}</span></div>
       <span class="b">${esc(r.region)}</span><span class="b">${esc(r.kind)}</span><span class="b ${st[r.status] || ""}">${esc(r.status)}</span>
-      ${r.source ? `<a class="btn small" href="${safeUrl(r.source)}" target="_blank" rel="noopener">Source</a>` : ""}</div>`;
+      ${r.source || r.url ? `<a class="btn small" href="${safeUrl(r.source || r.url)}" target="_blank" rel="noopener">Source</a>` : ""}
+      ${agDel(r)}</div>`;
   });
   $("#rels").innerHTML = html || '<div class="empty">Rien à venir pour ce filtre.</div>';
+  bindAgDel();
 }
 $("#relRegion").onchange = loadReleases; /* region filter applies to products */ $("#relPast").onchange = loadReleases;
 
@@ -1055,7 +1276,9 @@ $$("#nav button").forEach(b => b.addEventListener("click", () => {
   if (b.dataset.v === "map") loadMap();
   if (b.dataset.v === "releases") loadReleases();
   if (b.dataset.v === "settings") loadDiag();
+  if (b.dataset.v === "home") renderHome();
 }));
+$$("[data-go]").forEach(a => a.onclick = e => { e.preventDefault(); const v = a.dataset.go; show(v); $(`#nav [data-v="${v}"]`).click(); });
 
 load().then(() => { if (location.hash) show(location.hash.slice(1)); if (location.hash === "#wishlist") loadSets(); if (location.hash === "#map") loadMap(); if (location.hash === "#releases") loadReleases(); if (location.hash === "#settings") loadDiag(); if (S.job.running) poll(); });
 setInterval(loadNotifs, 60000);

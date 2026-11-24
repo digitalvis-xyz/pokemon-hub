@@ -267,9 +267,9 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
             r["query_card"] = "%s %s/%s" % (card.get("name_fr") or card.get("name_en"), card["number"], card.get("set_total", ""))
             r["new"] = it["listing_id"] not in seen
             r["demo"] = fixtures
-            only_lot = r["is_lot"] and set(x.split(":")[0] for x in r["rule_reject"]) <= {"lot", "over_budget"}
-            if only_lot and ("exact_number" in r["rule_flags"] or "name" in r["rule_flags"]):
-                r["verdict"] = "lot"          # group sale that contains the card: shown apart
+            blocked = any(x.startswith("blocked") for x in r["rule_reject"])
+            if r["is_lot"] and not blocked:
+                r["verdict"] = "lot"          # group sale: always shown apart, never auto-rejected
             elif not r["rule_reject"] and "exact_number" in r["rule_flags"] and r["rule_score"] >= 55:
                 r["verdict"] = "match"
             elif not r["rule_reject"] and r["rule_score"] >= 25:

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import threading
 import time
 import traceback
@@ -19,7 +20,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import base64
 
+import agenda
 import catalog
+import compare
 import geo
 import notifications
 import ocr
@@ -167,6 +170,10 @@ def job_vinted(say, params=None, stop=None) -> None:
     apply_env(s)
     demo = bool(s["demo_mode"])
     cards = load_json(WISHLIST_PATH(), {"cards": []})["cards"]
+    owned = [c for c in cards if c.get("owned")]
+    cards = [c for c in cards if not c.get("owned")]
+    if owned:
+        say("%d carte(s) marquée(s) « Je l'ai » ignorée(s)" % len(owned))
     ids = set((params or {}).get("ids") or [])
     if ids:
         cards = [c for c in cards if c["id"] in ids]
@@ -231,6 +238,12 @@ def job_all(say, params=None, stop=None) -> None:
     job_shops(say, params, stop)
 
 
+def job_agenda(say, params=None, stop=None) -> None:
+    say("Lecture des sources de l'agenda…")
+    r = agenda.refresh_sources(log=say)
+    say("Terminé : %d card show(s) et %d sortie(s) ajouté(s)" % (r["added"]["show"], r["added"]["release"]))
+
+
 def job_diag(say, params=None, stop=None) -> None:
     """Test every external dependency and keep a report you can copy and send."""
     import platform
@@ -263,7 +276,25 @@ def job_diag(say, params=None, stop=None) -> None:
     say("Diagnostic terminé : %d/%d OK" % (sum(c["ok"] for c in rep["checks"]), len(rep["checks"])))
 
 
-JOBS = {"vinted": job_vinted, "shops": job_shops, "all": job_all, "detect": job_detect, "diag": job_diag}
+JOBS = {"vinted": job_vinted, "shops": job_shops, "all": job_all, "detect": job_detect, "diag": job_diag, "agenda": job_agenda}
+
+
+def all_events() -> dict:
+    base = load_json(EVENTS_PATH, {"events": []})
+    u = agenda.user_data()
+    evs = [dict(e, origin="curated") for e in base.get("events", [])] + u["events"]
+    hidden = set(u.get("hidden", []))
+    return {"updated": base.get("updated"), "events": [e for e in evs if agenda._key(e) not in hidden],
+            "sources": u["sources"], "last_refresh": u.get("last_refresh")}
+
+
+def all_releases() -> dict:
+    base = load_json(RELEASES_PATH, {"releases": []})
+    u = agenda.user_data()
+    rels = [dict(r, origin="curated") for r in base.get("releases", [])] + u["releases"]
+    hidden = set(u.get("hidden", []))
+    return dict(base, releases=[r for r in rels if agenda._key(r) not in hidden], sources=u["sources"],
+                last_refresh=u.get("last_refresh"))
 
 
 def dedupe_wishlist() -> list[dict]:
@@ -361,14 +392,14 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             return self._send(502, {"error": "Catalogue TCGdex injoignable : %s" % str(e)[:160]})
         if path == "/api/events":
-            return self._send(200, load_json(EVENTS_PATH, {"events": []}))
+            return self._send(200, all_events())
         if path == "/api/releases":
-            return self._send(200, load_json(RELEASES_PATH, {"releases": []}))
+            return self._send(200, all_releases())
         if path == "/calendar.ics":
             evs = [dict(e, region="PT", status="officiel", kind="card show",
                         products=" · ".join(x for x in (e.get("venue"), e.get("address") or e.get("city"), e.get("details")) if x),
-                        source=e.get("url", "")) for e in load_json(EVENTS_PATH, {"events": []}).get("events", [])]
-            return self._send(200, ics(load_json(RELEASES_PATH, {"releases": []}).get("releases", []) + evs).encode("utf-8"),
+                        source=e.get("url", "")) for e in all_events()["events"]]
+            return self._send(200, ics(all_releases()["releases"] + evs).encode("utf-8"),
                               "text/calendar")
         if path == "/api/map":
             prof = get_profile()
@@ -388,7 +419,7 @@ class Handler(BaseHTTPRequestHandler):
                              "city": sh.get("city", ""), "address": sh.get("address", ""), "engine": sh.get("engine", ""),
                              "lat": g and g["lat"], "lng": g and g["lng"]})
             today = time.strftime("%Y-%m-%d")
-            for e in load_json(EVENTS_PATH, {"events": []}).get("events", []):
+            for e in all_events()["events"]:
                 if (e.get("date_end") or e["date"]) < today:
                     continue
                 q = e.get("address") or (e.get("city", "").split("(")[0].strip() + ", Portugal")
@@ -416,6 +447,55 @@ class Handler(BaseHTTPRequestHandler):
             body = self._body()
         except Exception:
             return self._send(400, {"error": "bad json"})
+
+        if path == "/api/wishlist/owned":
+            data = load_json(WISHLIST_PATH(), {"cards": []})
+            for c in data.get("cards", []):
+                if c["id"] == body.get("id"):
+                    c["owned"] = bool(body.get("owned"))
+            save_json(WISHLIST_PATH(), data)
+            return self._send(200, {"ok": True})
+
+        if path == "/api/shops/compare":
+            q = (body.get("q") or "").strip()
+            if len(q) < 2:
+                return self._send(400, {"error": "Tape au moins 2 lettres"})
+            return self._send(200, compare.compare(load_json(SHOPS_PATH(), {"shops": []}).get("shops", []), q))
+
+        if path == "/api/agenda/add":
+            kind = body.get("kind", "show")
+            item = {k: body.get(k) for k in ("title", "date", "date_end", "city", "address", "venue", "details", "url",
+                                             "region", "status", "image", "products")}
+            if not item.get("title") or not re.match(r"^\d{4}-\d{2}(-\d{2})?$", item.get("date") or ""):
+                return self._send(400, {"error": "Titre et date (AAAA-MM-JJ) obligatoires"})
+            if kind == "release":
+                item.setdefault("status", "annoncé")
+                item["kind"] = body.get("type") or "produits"
+            return self._send(200, {"item": agenda.add(kind, item)})
+
+        if path == "/api/agenda/remove":
+            if body.get("id"):
+                agenda.remove(body["id"])
+            elif body.get("title"):  # hide a curated item
+                u = agenda.user_data()
+                u["hidden"] = list(set(u.get("hidden", [])) | {agenda._key(body)})
+                agenda.save_user(u)
+            return self._send(200, {"ok": True})
+
+        if path == "/api/agenda/sources":
+            u = agenda.user_data()
+            srcs = [x for x in body.get("sources", []) if (x.get("url") or "").startswith("http")]
+            u["sources"] = srcs
+            agenda.save_user(u)
+            return self._send(200, {"sources": srcs})
+
+        if path == "/api/vinted/clear":
+            for name in ("last_vinted.json", "last_vinted_demo.json", "vinted_seen.json"):
+                fp = pstate(name)
+                if os.path.exists(fp):
+                    os.remove(fp)
+            notifications.purge_kind("vinted")
+            return self._send(200, {"ok": True})
 
         if path == "/api/job/stop":
             return self._send(200, {"stopping": JOB.stop(), "job": JOB.snapshot()})

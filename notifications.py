@@ -55,6 +55,11 @@ def purge_demo(pid: str | None = None) -> None:
         save_json(_path(pid), [n for n in _load(pid) if not n.get("demo")])
 
 
+def purge_kind(kind: str, pid: str | None = None) -> None:
+    with _lock:
+        save_json(_path(pid), [n for n in _load(pid) if n.get("kind") != kind])
+
+
 def clear() -> None:
     with _lock:
         save_json(_path(), [])

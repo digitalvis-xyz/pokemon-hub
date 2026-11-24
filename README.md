@@ -31,6 +31,8 @@ To see the app with test data, tick *Mode démo* in Réglages. *Effacer les donn
 
 | Tab | What it does |
 |---|---|
+| Accueil | Today at a glance: best Vinted offers (one per card), shop news, next releases, next card show, and a setup checklist while setup isn't finished |
+|---|---|
 | Bons plans | Vinted listings matched to your wishlist, with photo, price vs. your max, language, and why a listing was rejected |
 | Boutiques | Pre-orders, restocks and price drops, the full Pokémon inventory of each shop. Add a shop by pasting its address, or with one click from the **Portugal directory** (`shop_directory.json`, pre-filled from a web search). *Tout détecter* checks which shops are supported. |
 | Wishlist | Add cards from the open-source TCGdex catalogue (search by name, filter by set, "secret rares only"), or **import a screenshot** (Pokécardex list, binder, other app): Claude reads the cards and matches them to the catalogue for you to confirm. Then edit languages and max price. |
@@ -148,3 +150,10 @@ Vinted retired its old search address (`/api/v2/catalog/items`). The app now:
 ## Card shows
 
 `events.json` lists Portugal's card shows (buy / sell / trade, no competition). They appear in *Sorties → Card shows*, on the map (purple) and in `calendar.ics`.
+
+## This round
+
+- **Wishlist**: *Mur* (a big card wall) or *Tableau* view. *Je l'ai* marks a card as owned: it stops being searched on Vinted, and you can put it back with one click.
+- **Vinted**: *Vider les résultats* clears the results and the "already seen" history. Group sales are never rejected automatically: they always go to *Lots* (except proxies and fakes).
+- **Boutiques** has 4 sub-tabs: *Nouveautés* (what changed), *Comparateur de prix* (live search of one product across all your tracked shops), *Stock* (full inventory), *Mes boutiques* (add shops, directory, your lists).
+- **Agenda**: *+ Ajouter* (a card show or a release, with an optional image), *Sources & mise à jour* (pages read automatically for schema.org Event data), ✕ to delete your own entries or hide the built-in ones. Your additions live in `data/agenda_user.json`.
