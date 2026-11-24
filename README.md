@@ -32,8 +32,7 @@ To see the app with test data, tick *Mode démo* in Réglages. *Effacer les donn
 | Tab | What it does |
 |---|---|
 | Accueil | Today at a glance: best Vinted offers (one per card), shop news, next releases, next card show, and a setup checklist while setup isn't finished |
-|---|---|
-| Bons plans | Vinted listings matched to your wishlist, with photo, price vs. your max, language, and why a listing was rejected |
+| Vinted | Vinted listings matched to your wishlist, with photo, price vs. your max, language, and why a listing was rejected |
 | Boutiques | Pre-orders, restocks and price drops, the full Pokémon inventory of each shop. Add a shop by pasting its address, or with one click from the **Portugal directory** (`shop_directory.json`, pre-filled from a web search). *Tout détecter* checks which shops are supported. |
 | Wishlist | Add cards from the open-source TCGdex catalogue (search by name, filter by set, "secret rares only"), or **import a screenshot** (Pokécardex list, binder, other app): Claude reads the cards and matches them to the catalogue for you to confirm. Then edit languages and max price. |
 | Carte | Map of your shops and the Portugal directory (OpenStreetMap, free). Shops are placed from their address, or their city when there's none. |
