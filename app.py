@@ -42,6 +42,7 @@ def SHOPS_PATH() -> str:
     return pfile("shops.json")
 DIRECTORY_PATH = os.path.join(ROOT, "shop_directory.json")
 RELEASES_PATH = os.path.join(ROOT, "releases.json")
+EVENTS_PATH = os.path.join(ROOT, "events.json")
 STATIC = os.path.join(ROOT, "static")
 
 DEFAULT_SETTINGS = {
@@ -49,12 +50,14 @@ DEFAULT_SETTINGS = {
     "vinted_domain": "fr",
     "vinted_delay": 3.0,
     "use_ai": True,
-    "screenshot_engine": "auto",  # auto = Claude if an API key is set, else free macOS OCR
+    "screenshot_engine": "auto",
+    "vinted_top_k": 3,          # best offers kept per card
+    "google_places_key": "",    # optional: better shop autofill  # auto = Claude if an API key is set, else free macOS OCR
     "anthropic_api_key": "",
     "telegram_bot_token": "",
     "telegram_chat_id": "",
 }
-SECRET_KEYS = ("anthropic_api_key", "telegram_bot_token")
+SECRET_KEYS = ("anthropic_api_key", "telegram_bot_token", "google_places_key")
 ENV_MAP = {"anthropic_api_key": "ANTHROPIC_API_KEY", "telegram_bot_token": "TELEGRAM_BOT_TOKEN",
            "telegram_chat_id": "TELEGRAM_CHAT_ID"}
 
@@ -94,22 +97,35 @@ class Job:
         self.started = None
         self.finished = None
         self.error = None
+        self._stop = threading.Event()
 
     def say(self, line: str) -> None:
         with self.lock:
             self.log.append(line)
             self.log = self.log[-400:]
 
-    def start(self, kind: str, fn) -> bool:
+    def stop(self) -> bool:
+        with self.lock:
+            if not self.running:
+                return False
+            self._stop.set()
+            self.log.append("Arrêt demandé…")
+            return True
+
+    def stopping(self) -> bool:
+        return self._stop.is_set()
+
+    def start(self, kind: str, fn, params: dict | None = None) -> bool:
         with self.lock:
             if self.running:
                 return False
             self.running, self.kind, self.log, self.error = True, kind, [], None
+            self._stop = threading.Event()
             self.started, self.finished = time.time(), None
 
         def target():
             try:
-                fn(self.say)
+                fn(self.say, params or {}, self.stopping)
             except Exception as e:
                 self.error = str(e)
                 self.say("ERROR: %s" % e)
@@ -146,21 +162,29 @@ def results_path(kind: str, demo: bool) -> str:
     return pstate("last_%s%s.json" % (kind, "_demo" if demo else ""))
 
 
-def job_vinted(say) -> None:
+def job_vinted(say, params=None, stop=None) -> None:
     s = get_settings()
     apply_env(s)
     demo = bool(s["demo_mode"])
     cards = load_json(WISHLIST_PATH(), {"cards": []})["cards"]
+    ids = set((params or {}).get("ids") or [])
+    if ids:
+        cards = [c for c in cards if c["id"] in ids]
+        say("Recherche limitée à %d carte(s) sélectionnée(s)" % len(cards))
     domain = get_profile().get("vinted_domain") or s["vinted_domain"]
     rows = vinted_search.search(cards, domain=domain, fixtures=demo, use_ai=bool(s["use_ai"]),
-                                delay=float(s["vinted_delay"]), log=say)
+                                delay=float(s["vinted_delay"]), log=say, stop=stop,
+                                top_k=int(s.get("vinted_top_k") or 3))
+    if ids:  # partial search: keep previous results for the other cards
+        prev = load_json(results_path("vinted", demo), {}).get("rows", [])
+        rows = [r for r in prev if r.get("card_id") not in ids] + rows
     save_json(results_path("vinted", demo), {"at": time.time(), "demo": demo, "domain": domain, "rows": rows})
     n = notifications.add(notifications.from_vinted(rows, demo))
     if n:
         say("%d nouvelle(s) notification(s)" % n)
 
 
-def job_shops(say) -> None:
+def job_shops(say, params=None, stop=None) -> None:
     s = get_settings()
     apply_env(s)
     demo = bool(s["demo_mode"])
@@ -173,7 +197,7 @@ def job_shops(say) -> None:
         res = shops_watch.watch(cfg, fixtures=True, run_no=2, log=say)
     else:
         cfg = load_json(SHOPS_PATH(), {"shops": []})
-        res = shops_watch.watch(cfg, log=say)
+        res = shops_watch.watch(cfg, log=say, stop=stop)
         prev = load_json(results_path("shops", False), {})
         # keep a short history of events across runs so they don't vanish on the next quiet run
         history = (res["events"] + prev.get("history", []))[:300]
@@ -186,7 +210,7 @@ def job_shops(say) -> None:
         say("%d nouvelle(s) notification(s)" % n)
 
 
-def job_detect(say) -> None:
+def job_detect(say, params=None, stop=None) -> None:
     data = load_json(SHOPS_PATH(), {"keywords": ["pokemon", "pokémon"], "shops": []})
     http = Http()
     for shop in data.get("shops", []):
@@ -198,14 +222,16 @@ def job_detect(say) -> None:
     say("%d/%d boutiques compatibles" % (ok, len(data["shops"])))
 
 
-def job_all(say) -> None:
+def job_all(say, params=None, stop=None) -> None:
     say("== Vinted ==")
-    job_vinted(say)
-    say("== Shops ==")
-    job_shops(say)
+    job_vinted(say, params, stop)
+    if stop and stop():
+        return
+    say("== Boutiques ==")
+    job_shops(say, params, stop)
 
 
-def job_diag(say) -> None:
+def job_diag(say, params=None, stop=None) -> None:
     """Test every external dependency and keep a report you can copy and send."""
     import platform
     rep = {"at": time.time(), "python": platform.python_version(), "os": platform.platform(), "checks": []}
@@ -238,6 +264,21 @@ def job_diag(say) -> None:
 
 
 JOBS = {"vinted": job_vinted, "shops": job_shops, "all": job_all, "detect": job_detect, "diag": job_diag}
+
+
+def dedupe_wishlist() -> list[dict]:
+    """Return the wishlist without duplicate card ids (and fix the file if needed)."""
+    data = load_json(WISHLIST_PATH(), {"cards": []})
+    seen_ids, uniq = set(), []
+    for c in data.get("cards", []):
+        if c.get("id") and c["id"] in seen_ids:
+            continue
+        seen_ids.add(c.get("id"))
+        uniq.append(c)
+    if len(uniq) != len(data.get("cards", [])):
+        data["cards"] = uniq
+        save_json(WISHLIST_PATH(), data)
+    return uniq
 
 
 def ics(releases: list[dict]) -> str:
@@ -298,7 +339,7 @@ class Handler(BaseHTTPRequestHandler):
             demo = bool(s["demo_mode"])
             return self._send(200, {
                 "settings": public_settings(s),
-                "wishlist": load_json(WISHLIST_PATH(), {"cards": []}).get("cards", []),
+                "wishlist": dedupe_wishlist(),
                 "shops": load_json(SHOPS_PATH(), {"shops": []}).get("shops", []),
                 "vinted": load_json(results_path("vinted", demo), {}),
                 "shops_result": load_json(results_path("shops", demo), {}),
@@ -319,10 +360,15 @@ class Handler(BaseHTTPRequestHandler):
                     page=int(qs.get("page", 1)), secret_only=qs.get("secret") == "1"))
         except Exception as e:
             return self._send(502, {"error": "Catalogue TCGdex injoignable : %s" % str(e)[:160]})
+        if path == "/api/events":
+            return self._send(200, load_json(EVENTS_PATH, {"events": []}))
         if path == "/api/releases":
             return self._send(200, load_json(RELEASES_PATH, {"releases": []}))
         if path == "/calendar.ics":
-            return self._send(200, ics(load_json(RELEASES_PATH, {"releases": []}).get("releases", [])).encode("utf-8"),
+            evs = [dict(e, region="PT", status="officiel", kind="card show",
+                        products=" · ".join(x for x in (e.get("venue"), e.get("address") or e.get("city"), e.get("details")) if x),
+                        source=e.get("url", "")) for e in load_json(EVENTS_PATH, {"events": []}).get("events", [])]
+            return self._send(200, ics(load_json(RELEASES_PATH, {"releases": []}).get("releases", []) + evs).encode("utf-8"),
                               "text/calendar")
         if path == "/api/map":
             prof = get_profile()
@@ -336,9 +382,20 @@ class Handler(BaseHTTPRequestHandler):
                     [(x, "directory") for x in load_json(DIRECTORY_PATH, {"shops": []}).get("shops", [])
                      if (x.get("url") or x["name"]).rstrip("/").lower() not in fkeys]:
                 q = geo.shop_query(sh)
-                g = geo.geocode(q) if q else None
+                g = {"lat": sh["lat"], "lng": sh["lng"]} if sh.get("lat") is not None else (geo.geocode(q) if q else None)
                 pins.append({"name": sh["name"], "url": sh.get("url", ""), "kind": kind, "query": q,
-                             "approx": not sh.get("address"), "note": sh.get("note", ""),
+                             "approx": not sh.get("address") and sh.get("lat") is None, "note": sh.get("note", ""),
+                             "city": sh.get("city", ""), "address": sh.get("address", ""), "engine": sh.get("engine", ""),
+                             "lat": g and g["lat"], "lng": g and g["lng"]})
+            today = time.strftime("%Y-%m-%d")
+            for e in load_json(EVENTS_PATH, {"events": []}).get("events", []):
+                if (e.get("date_end") or e["date"]) < today:
+                    continue
+                q = e.get("address") or (e.get("city", "").split("(")[0].strip() + ", Portugal")
+                g = geo.geocode(q)
+                pins.append({"name": e["title"], "url": e.get("url", ""), "kind": "event", "query": q,
+                             "approx": not e.get("address"), "note": e.get("details", ""), "city": e.get("city", ""),
+                             "address": e.get("address", ""), "date": e["date"], "date_end": e.get("date_end"),
                              "lat": g and g["lat"], "lng": g and g["lng"]})
             return self._send(200, {"home": home, "pins": pins})
         if path == "/api/diagnostic":
@@ -360,11 +417,14 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self._send(400, {"error": "bad json"})
 
+        if path == "/api/job/stop":
+            return self._send(200, {"stopping": JOB.stop(), "job": JOB.snapshot()})
+
         if path.startswith("/api/run/"):
             kind = path.rsplit("/", 1)[-1]
             if kind not in JOBS:
                 return self._send(404, {"error": "unknown job"})
-            ok = JOB.start(kind, JOBS[kind])
+            ok = JOB.start(kind, JOBS[kind], body)
             return self._send(200 if ok else 409, {"started": ok, "job": JOB.snapshot()})
 
         if path == "/api/wishlist":
@@ -374,7 +434,12 @@ class Handler(BaseHTTPRequestHandler):
                     if not str(c.get(k, "")).strip():
                         return self._send(400, {"error": "every card needs an id and a number"})
             data = load_json(WISHLIST_PATH(), {})
-            data["cards"] = cards
+            seen_ids, uniq = set(), []
+            for c in cards:
+                if c["id"] not in seen_ids:
+                    seen_ids.add(c["id"])
+                    uniq.append(c)
+            data["cards"] = uniq
             save_json(WISHLIST_PATH(), data)
             return self._send(200, {"ok": True})
 
@@ -497,6 +562,30 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/notifications/clear":
             notifications.clear()
             return self._send(200, notifications.list_all())
+
+        if path == "/api/shops/lookup":
+            key = get_settings().get("google_places_key", "")
+            return self._send(200, {"results": geo.lookup(body.get("query", ""), key)[:8], "google": bool(key)})
+
+        if path == "/api/shops/add":
+            # add from a lookup result: website optional (map-only shop when missing)
+            data = load_json(SHOPS_PATH(), {"keywords": ["pokemon", "pokémon"], "shops": []})
+            shop = {k: body[k] for k in ("name", "address", "city", "lat", "lng") if body.get(k) not in (None, "")}
+            url = (body.get("website") or body.get("url") or "").strip().rstrip("/")
+            if url:
+                p = urlparse(url if url.startswith("http") else "https://" + url)
+                url = "%s://%s" % (p.scheme, p.netloc)
+                if any((x.get("url") or "").rstrip("/").lower() == url.lower() for x in data.get("shops", [])):
+                    return self._send(200, {"ok": True, "already": True, "shops": data["shops"]})
+                try:
+                    shop["engine"] = shops_watch.detect(Http(), url)
+                except Exception:
+                    shop["engine"] = "error"
+            shop["url"] = url
+            shop.setdefault("name", shop_name_from_url(url) if url else "Boutique")
+            data.setdefault("shops", []).append(shop)
+            save_json(SHOPS_PATH(), data)
+            return self._send(200, {"ok": True, "shop": shop, "shops": data["shops"]})
 
         if path == "/api/shops/quick-add":
             url = (body.get("url") or "").strip()

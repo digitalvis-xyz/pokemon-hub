@@ -159,7 +159,7 @@ ALERT_EVENTS = ("NEW_PREORDER", "RESTOCK", "NEW", "PRICE_DROP")
 
 
 def watch(cfg: dict, fixtures: bool = False, run_no: int = 1, delay: float = 2.0,
-          log=print, send_alerts: bool = True) -> dict:
+          log=print, send_alerts: bool = True, stop=None) -> dict:
     """Fetch every shop, diff against saved state. Returns {"events", "inventory", "shops"}."""
     http = Http()
     keywords = cfg.get("keywords", ["pokemon"])
@@ -168,6 +168,11 @@ def watch(cfg: dict, fixtures: bool = False, run_no: int = 1, delay: float = 2.0
     all_events, inventory, summary = [], [], []
 
     for shop in cfg.get("shops", []):
+        if stop and stop():
+            log("Arrêt demandé.")
+            break
+        if not shop.get("url"):
+            continue  # map-only shop (physical store, no website to track)
         name, base = shop["name"], shop["url"].rstrip("/")
         try:
             if fixtures:

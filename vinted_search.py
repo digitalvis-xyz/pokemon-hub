@@ -25,20 +25,25 @@ from report import write_csv, write_html
 
 
 def build_queries(card: dict) -> list[str]:
-    """Several phrasings per card, because sellers write titles in many ways."""
-    n, total, code = card["number"], card.get("set_total", ""), card.get("set_code", "")
-    q = []
-    for name in (card.get("name_fr"), card.get("name_en")):
-        if not name:
-            continue
-        q.append("%s %s/%s" % (name, n, total) if total else "%s %s" % (name, n))
-    if code and card.get("name_fr"):
-        q.append("%s %s %s" % (card["name_fr"], code, n))
+    """One query per language the card is wanted in. Vinted searches the title text as written by the
+    seller (it doesn't translate the search), so a French title needs the French name and an English
+    title the English name; the collector number 199/165 is the same everywhere and keeps it precise."""
+    n, total = card["number"], card.get("set_total", "")
+    num = "%s/%s" % (n, total) if total else n
+    langs = card.get("languages") or ["fr"]
+    names = []
+    if "fr" in langs and card.get("name_fr"):
+        names.append(card["name_fr"])
+    if any(l in langs for l in ("en", "ja", "pt")) and card.get("name_en"):
+        names.append(card["name_en"])  # JP/PT listings on Vinted are mostly titled in English
+    if not names:
+        names = [card.get("name_fr") or card.get("name_en") or ""]
     seen, out = set(), []
-    for s in q:
-        if s.lower() not in seen:
-            seen.add(s.lower())
-            out.append(s)
+    for name in names:
+        q = ("%s %s" % (name, num)).strip()
+        if q.lower() not in seen:
+            seen.add(q.lower())
+            out.append(q)
     return out
 
 
@@ -215,11 +220,12 @@ def html_unescape(s: str) -> str:
     return _h.unescape(s)
 
 
-VERDICT_ORDER = {"match": 0, "review": 1, "rejected": 2}
+VERDICT_ORDER = {"match": 0, "review": 1, "lot": 2, "more": 3, "rejected": 4}
 
 
 def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai: bool | None = None,
-           recheck: bool = False, delay: float = 3.0, log=print, send_alerts: bool = True) -> list[dict]:
+           recheck: bool = False, delay: float = 3.0, log=print, send_alerts: bool = True,
+           stop=None, top_k: int = 3) -> list[dict]:
     """Search Vinted for every card and classify. Returns rows sorted best first."""
     seen_path = pstate("vinted_seen.json")
     seen = load_json(seen_path, {})
@@ -233,9 +239,16 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
     client = None if fixtures else Vinted(domain)
 
     rows = []
+    stopped = False
     for card in cards:
+        if stop and stop():
+            stopped = True
+            log("Arrêt demandé : recherche interrompue.")
+            break
         listings = {}
         for q in build_queries(card):
+            if stop and stop():
+                break
             try:
                 if fixture is not None:
                     items = [normalise_item(it, "https://www.vinted.fr") for it in fixture.get("items", [])]
@@ -254,7 +267,10 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
             r["query_card"] = "%s %s/%s" % (card.get("name_fr") or card.get("name_en"), card["number"], card.get("set_total", ""))
             r["new"] = it["listing_id"] not in seen
             r["demo"] = fixtures
-            if not r["rule_reject"] and r["rule_score"] >= 55:
+            only_lot = r["is_lot"] and set(x.split(":")[0] for x in r["rule_reject"]) <= {"lot", "over_budget"}
+            if only_lot and ("exact_number" in r["rule_flags"] or "name" in r["rule_flags"]):
+                r["verdict"] = "lot"          # group sale that contains the card: shown apart
+            elif not r["rule_reject"] and "exact_number" in r["rule_flags"] and r["rule_score"] >= 55:
                 r["verdict"] = "match"
             elif not r["rule_reject"] and r["rule_score"] >= 25:
                 r["verdict"] = "review"
@@ -273,6 +289,18 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
                     r["verdict"] = "match"
             rows.append(r)
 
+    # Keep it readable: per card, only the K cheapest matches stay "match", the next reviews/lots are capped too.
+    by_card: dict[str, list[dict]] = {}
+    for r in rows:
+        by_card.setdefault(r["card_id"], []).append(r)
+    for card_rows in by_card.values():
+        for verdict, keep in (("match", top_k), ("review", 3), ("lot", 3)):
+            ranked = sorted((r for r in card_rows if r["verdict"] == verdict), key=lambda r: r.get("price") or 1e9)
+            for i, r in enumerate(ranked):
+                r["rank"] = i + 1
+                if i >= keep:
+                    r["hidden_from"] = verdict
+                    r["verdict"] = "more"
     if client is not None:
         save_json(pstate("vinted_debug.json"), {"domain": domain, "mode": client.mode, "attempts": client.attempts[-60:]})
         log("Méthode Vinted utilisée : %s" % (client.mode or "aucune"))
@@ -284,8 +312,8 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
         save_json(seen_path, seen)
 
     stats = {v: sum(1 for r in rows if r["verdict"] == v) for v in VERDICT_ORDER}
-    log("%d listings · %d match · %d review · %d rejected · %d new matches" % (
-        len(rows), stats["match"], stats["review"], stats["rejected"], len(fresh)))
+    log("%d annonces · %d meilleures offres (max %d par carte) · %d à vérifier · %d lots · %d autres · %d rejetées · %d nouvelles" % (
+        len(rows), stats["match"], top_k, stats["review"], stats["lot"], stats["more"], stats["rejected"], len(fresh)))
     if fresh and send_alerts and not fixtures:
         msg = "\n\n".join("%s\n%.0f € (%s)\n%s" % (r["query_card"], r["price"] or 0, r["title"][:60], r["url"]) for r in fresh[:10])
         if telegram("Nouvelles annonces Vinted\n\n" + msg):

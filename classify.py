@@ -19,7 +19,16 @@ BLOCK_WORDS = [
     "orica", "metal card", "carte metal", "gold metal", "non officiel", "unofficial",
     "jumbo", "oversize", "sticker", "autocollant", "toploader vide", "sleeve", "pochette vide",
 ]
-LOT_WORDS = ["lot ", "lot de", "bundle", "collection complete", "x cartes", "cartes pokemon en vrac", "bulk"]
+LOT_WORDS = [" lot ", "lot de", " lote ", "bundle", "collection complete", "x cartes", "cartes pokemon en vrac", "bulk",
+             "classeur", "binder", "pack de", "set de", "plusieurs cartes", "various cards", "varias cartas", "vrac"]
+LOT_COUNT = re.compile(r"\b\d{2,4}\s*(?:cartes|cards|cartas|carte)\b")
+ANY_NUMBER = re.compile(r"(?<![\d/])\d{1,3}[a-z]?\s*/\s*\d{1,3}(?![\d/])")
+
+
+def looks_like_lot(text: str) -> bool:
+    """Group sale: lot words, 'NN cartes', or several collector numbers in the same listing."""
+    return (any(w in text for w in LOT_WORDS) or bool(LOT_COUNT.search(text))
+            or len(set(ANY_NUMBER.findall(text))) >= 2)
 GRADED_WORDS = ["psa", "pca", "cgc", "bgs", "beckett", "collect aura", "gradee", "graded", "slab"]
 LANG_HINTS = {
     "ja": ["japonais", "japanese", "jap ", " jp", "japan"],
@@ -64,7 +73,7 @@ def rule_check(listing: dict, card: dict) -> dict:
         flags.append("set_code")
 
     blocked = [w for w in BLOCK_WORDS if w in text]
-    is_lot = any(w in text for w in LOT_WORDS)
+    is_lot = looks_like_lot(text)
     is_graded = any(w in text for w in GRADED_WORDS)
     lang = next((lg for lg, hints in LANG_HINTS.items() if any(h in text for h in hints)), None)
 

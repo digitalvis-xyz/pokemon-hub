@@ -18,11 +18,11 @@ button,input,select{font:inherit}
 a{color:inherit}
 header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
 .bar{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:10px 20px}
-.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;letter-spacing:-.01em}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;letter-spacing:-.01em;white-space:nowrap}
 .ball{width:20px;height:20px;border-radius:50%;background:linear-gradient(var(--accent) 0 46%,#1d1b18 46% 54%,#fff 54%);border:2px solid #1d1b18;position:relative}
 .ball:after{content:"";position:absolute;inset:5px;border-radius:50%;background:#fff;border:2px solid #1d1b18}
-nav{display:flex;gap:2px;margin-left:12px}
-nav button{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--muted);cursor:pointer;font-weight:500}
+nav{display:flex;gap:2px;margin-left:8px;min-width:0;overflow-x:auto}
+nav button{white-space:nowrap;border:0;background:none;padding:8px 10px;border-radius:8px;color:var(--muted);cursor:pointer;font-weight:500}
 nav button.on{background:var(--bg);color:var(--ink)}
 .count{font-size:11px;line-height:17px;min-width:17px;text-align:center;background:var(--accent);color:#fff;border-radius:9px;padding:0 5px;margin-left:4px;font-weight:600}
 .spacer{flex:1}
@@ -32,12 +32,12 @@ nav button.on{background:var(--bg);color:var(--ink)}
 .btn.small{padding:4px 9px;font-size:13px}
 .btn:disabled{opacity:.5;cursor:default}
 select,input[type=text],input[type=number],input[type=password],input[type=url]{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 9px;min-width:0}
-.demo{background:var(--warn-bg);color:var(--warn);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.demo{white-space:nowrap;background:var(--warn-bg);color:var(--warn);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;cursor:pointer}
 .status{max-width:1280px;margin:0 auto;padding:0 20px 8px;display:none;align-items:center;gap:10px;color:var(--muted);font-size:13px}
 .status.show{display:flex}
 .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s 0.8s linear infinite}
 @keyframes s{to{transform:rotate(360deg)}}
-pre.log{max-width:1280px;margin:0 auto 8px;padding:10px 20px;background:#1d1b18;color:#e9e4d8;font:12px/1.5 ui-monospace,Menlo,monospace;max-height:220px;overflow:auto;white-space:pre-wrap;display:none}
+pre.log{max-width:1280px;margin:0 auto 8px;padding:10px 20px;background:#1d1b18;color:#e9e4d8;font:12px/1.5 ui-monospace,Menlo,monospace;max-height:160px;overflow:auto;white-space:pre-wrap;display:none}
 pre.log.show{display:block}
 main{max-width:1280px;margin:0 auto;padding:20px}
 .view{display:none}.view.on{display:block}
@@ -130,7 +130,26 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
 .dir{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
 .dir div.it{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:center}
 .dir .it .g{flex:1;min-width:0}.dir .it .g b{display:block}.dir .it .g span{font-size:12px;color:var(--muted)}
-#map{height:560px;border-radius:var(--radius);border:1px solid var(--line);background:#e9e5dc}
+.maplay{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.mside{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);height:600px;display:flex;flex-direction:column;overflow:hidden}
+.mside .chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px;border-bottom:1px solid var(--line)}
+.mside .lst{overflow:auto;flex:1}
+.mi{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.mi:hover{background:#faf8f4}.mi.on{background:#fff3f1;box-shadow:inset 3px 0 0 var(--accent)}
+.mi b{display:block}.mi .m{font-size:12px;color:var(--muted)}.mi .ln{display:flex;gap:10px;font-size:12px;margin-top:4px}
+.grp{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.grp .gh{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.grp .gh img{width:44px;border-radius:4px;background:#efebe3}
+.grp .gh .t{flex:1}.grp .gh .t b{display:block}.grp .gh .t span{font-size:12px;color:var(--muted)}
+.grp .grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.picker{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:14px}
+.picker .pl{max-height:260px;overflow:auto;columns:3 240px;margin:10px 0}
+.picker label{display:block;break-inside:avoid;padding:2px 0;font-size:13px}
+.statusx{margin-left:auto;border:0;background:none;cursor:pointer;color:var(--muted);font-size:16px}
+.cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:12px}
+.cand{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.cand b{display:block}.cand span{display:block;font-size:12px;color:var(--muted)}
+#map{height:600px;border-radius:var(--radius);border:1px solid var(--line);background:#e9e5dc}
 .legend{display:flex;gap:14px;align-items:center;font-size:13px;color:var(--muted);margin:10px 0}
 .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 .month{margin:22px 0 8px;font-weight:600;color:var(--muted);text-transform:capitalize}
@@ -139,7 +158,8 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
 .rel .g{flex:1;min-width:0}.rel .g b{display:block}.rel .g span{font-size:12px;color:var(--muted)}
 .rel.past{opacity:.5}
 .prof{display:flex;align-items:center;gap:6px}
-.prof select{max-width:150px}
+.prof select{max-width:120px}
+.bar{gap:10px}
 pre.diag{background:#1d1b18;color:#e9e4d8;font:12px/1.5 ui-monospace,Menlo,monospace;padding:12px;border-radius:10px;max-height:360px;overflow:auto;white-space:pre-wrap}
 textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:8px;padding:10px;width:100%;min-height:220px}
 @media (max-width:760px){nav{margin-left:0;overflow:auto}.bar{flex-wrap:wrap}.form{grid-template-columns:1fr}.form .hint{grid-column:1}}
@@ -162,13 +182,14 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
     <button class="bell" id="bell" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="count" id="c-notif" hidden></span></button>
     <span class="demo" id="demo" title="Données de démo : cliquez pour ouvrir les réglages" hidden>Mode démo</span>
     <select id="auto" title="Actualisation automatique (tant que la page est ouverte)">
-      <option value="0">Auto : off</option><option value="15">Toutes les 15 min</option>
-      <option value="30">Toutes les 30 min</option><option value="60">Toutes les heures</option>
+      <option value="0">Auto : non</option><option value="15">Auto : 15 min</option>
+      <option value="30">Auto : 30 min</option><option value="60">Auto : 1 h</option>
     </select>
     <button class="btn primary" id="runAll">Tout actualiser</button>
   </div>
   <div class="status" id="status"><span class="spin"></span><span id="statusText">En cours…</span>
-    <button class="btn small" id="logBtn">Voir le journal</button></div>
+    <button class="btn small" id="logBtn">Voir le journal</button><button class="btn small" id="stopBtn">Arrêter</button>
+    <button class="statusx" id="statusClose" title="Fermer">✕</button></div>
   <pre class="log" id="log"></pre>
   <div class="npanel" id="npanel" hidden>
     <div class="nh"><b>Notifications</b><button class="btn small" id="nRead">Tout marquer lu</button><button class="btn small" id="nClear">Vider</button></div>
@@ -181,11 +202,20 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
   <section class="view on" id="v-deals">
     <div class="tools">
       <h2 style="margin-right:auto">Vinted × ta wishlist</h2>
-      <button class="btn" data-run="vinted">Chercher sur Vinted</button>
+      <button class="btn" id="pickBtn">Choisir les cartes…</button>
+      <button class="btn primary" id="searchSel">Chercher sur Vinted</button>
+    </div>
+    <div class="picker" id="picker" hidden>
+      <div class="tools" style="margin:0"><b style="margin-right:auto">Cartes à chercher</b><input type="text" id="pickQ" placeholder="Filtrer…" style="width:180px">
+        <button class="btn small" id="pickAll">Toutes</button><button class="btn small" id="pickNone">Aucune</button></div>
+      <div class="pl" id="pickList"></div>
+      <span class="meta">La sélection est mémorisée. Les résultats des autres cartes sont conservés.</span>
     </div>
     <div class="tools" id="dealTools">
-      <span class="chip on" data-f="match">Matches<span class="n" id="n-match"></span></span>
+      <span class="chip on" data-f="match" title="Les meilleures offres par carte (cartes seules)">Meilleures offres<span class="n" id="n-match"></span></span>
       <span class="chip" data-f="review">À vérifier<span class="n" id="n-review"></span></span>
+      <span class="chip" data-f="lot" title="Ventes groupées qui contiennent la carte">Lots<span class="n" id="n-lot"></span></span>
+      <span class="chip" data-f="more" title="Autres annonces correctes, moins chères en premier">Autres offres<span class="n" id="n-more"></span></span>
       <span class="chip" data-f="rejected">Rejetées<span class="n" id="n-rejected"></span></span>
       <span class="chip" data-f="all">Tout</span>
       <select id="cardFilter"><option value="">Toutes les cartes</option></select>
@@ -217,25 +247,33 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
     <div class="panel"><table><thead><tr><th>Boutique</th><th>Produit</th><th>Prix</th><th>Stock</th><th></th></tr></thead><tbody id="inv"></tbody></table></div>
     <div class="foot" id="shopsFoot"></div>
     <h3>Ajouter une boutique</h3>
-    <div class="tools"><input type="url" id="qaUrl" placeholder="Colle l'adresse d'une boutique, ex. https://versusgamecenter.pt" style="width:420px"><button class="btn primary" id="qaGo">Ajouter</button><span class="meta">Le nom et la compatibilité sont détectés automatiquement.</span></div>
+    <div class="tools"><input type="text" id="qaUrl" placeholder="Nom, site web ou adresse — ex. « Versus Gamecenter », « versusgamecenter.pt »" style="width:460px"><button class="btn primary" id="qaGo">Chercher</button><span class="meta" id="qaInfo">Une seule info suffit : on complète le reste.</span></div>
+    <div class="cands" id="cands"></div>
     <h3>Annuaire Portugal <span class="meta" style="font-weight:400">· pré-rempli par recherche web, à affiner ensemble</span></h3>
     <div class="dir" id="dir"></div>
-    <h3>Boutiques suivies</h3>
-    <p class="sub">« Détecter » vérifie si la boutique est compatible (Shopify ou WooCommerce). Les autres demanderont un module RSS plus tard.</p>
+    <h3>Boutiques suivies — stock en ligne</h3>
+    <p class="sub">Compatibles (Shopify ou WooCommerce) : l'app surveille nouveautés, précommandes, retours en stock et prix.</p>
     <div class="panel"><table><thead><tr><th style="width:18%">Nom</th><th>URL</th><th style="width:22%">Adresse (pour la carte)</th><th style="width:110px">Ville</th><th style="width:110px">Moteur</th><th style="width:170px"></th></tr></thead><tbody id="shopList"></tbody></table></div>
+    <h3>Mes autres boutiques — sur la carte uniquement</h3>
+    <p class="sub">Magasins physiques, sites non compatibles ou injoignables : ils restent dans ta liste et sur la carte. « Détecter » re-teste le site.</p>
+    <div class="panel"><table><thead><tr><th style="width:18%">Nom</th><th>URL</th><th style="width:22%">Adresse (pour la carte)</th><th style="width:110px">Ville</th><th style="width:110px">État</th><th style="width:170px"></th></tr></thead><tbody id="shopList2"></tbody></table></div>
     <div class="tools" style="margin-top:10px"><button class="btn" id="addShop">+ Ligne vide</button><button class="btn" id="detectAll">Tout détecter</button><button class="btn primary" id="saveShops">Enregistrer</button></div>
   </section>
 
   <!-- WISHLIST -->
   <section class="view" id="v-map">
     <div class="tools"><h2 style="margin-right:auto">Carte des boutiques</h2><button class="btn" id="mapReload">Actualiser</button></div>
-    <div class="legend"><span><i class="dot" style="background:#d6402f"></i>Boutiques suivies</span><span><i class="dot" style="background:#8a8378"></i>Annuaire (pas encore suivies)</span><span><i class="dot" style="background:#2a5db0"></i>Toi (ville du profil)</span><span id="mapInfo"></span></div>
-    <div id="map"></div>
+    <div class="legend"><span><i class="dot" style="background:#d6402f"></i>Boutiques suivies</span><span><i class="dot" style="background:#8a8378"></i>Annuaire (pas encore suivies)</span><span><i class="dot" style="background:#7b4fc7"></i>Card shows à venir</span><span><i class="dot" style="background:#2a5db0"></i>Toi (ville du profil)</span><span id="mapInfo"></span></div>
+    <div class="maplay"><div id="map"></div>
+      <div class="mside"><div class="chips" id="mchips">
+        <span class="chip on" data-mk="">Tout</span><span class="chip" data-mk="followed">Mes boutiques</span><span class="chip" data-mk="directory">Annuaire</span><span class="chip" data-mk="event">Card shows</span></div>
+        <div class="lst" id="mlist"></div></div></div>
     <p class="meta">Les boutiques sans adresse précise sont placées au centre de leur ville (« approx. »). Ajoute l'adresse dans Boutiques → Boutiques suivies pour un point exact. Fond de carte © OpenStreetMap.</p>
   </section>
 
   <section class="view" id="v-releases">
     <div class="tools"><h2 style="margin-right:auto">Prochaines sorties</h2>
+      <span class="chip on" data-rk="products">Produits</span><span class="chip" data-rk="shows">Card shows Portugal</span>
       <select id="relRegion"><option value="">Toutes les régions</option><option value="FR">France</option><option value="EN">Anglais</option><option value="JP">Japon</option></select>
       <label class="toggle"><input type="checkbox" id="relPast"> Afficher les sorties passées</label>
       <a class="btn" href="/calendar.ics" download="sorties-pokemon.ics">Télécharger (.ics)</a></div>
@@ -311,6 +349,10 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
       <label class="toggle"><input type="checkbox" id="s-demo"> Utiliser les données de test (rien n'est envoyé sur Internet)</label>
       <label>Pause entre requêtes (s)</label><input type="number" id="s-delay" min="1" step="0.5" style="width:100px">
       <span class="hint">Plus c'est lent, moins Vinted risque de bloquer. 3 s est raisonnable.</span>
+      <label>Offres Vinted par carte</label><input type="number" id="s-topk" min="1" max="10" style="width:100px">
+      <span class="hint">Nombre de meilleures offres gardées par carte (les autres vont dans « Autres offres »).</span>
+      <label>Clé Google Places</label><input type="password" id="s-gkey" placeholder="optionnelle" autocomplete="off">
+      <span class="hint">Optionnelle : améliore l'ajout de boutiques (adresse, site). Sans clé, OpenStreetMap est utilisé gratuitement.</span>
       <label>Vérification IA (Claude)</label>
       <label class="toggle"><input type="checkbox" id="s-ai"> Vérifier titre + photo des nouvelles annonces</label>
       <label>Lecture des captures</label>
@@ -359,7 +401,7 @@ $("#demo").onclick = () => show("settings");
 async function load() {
   S = await api("/api/state");
   renderHeader(); renderDeals(); renderShops(); renderWishlist(); renderSettings(); renderJob(S.job);
-  loadNotifs(); loadDirectory(); renderProfile();
+  loadNotifs(); loadDirectory(); renderProfile(); updateSearchBtn();
 }
 function renderHeader() {
   $("#demo").hidden = !S.settings.demo_mode;
@@ -377,21 +419,32 @@ $("#newOnly").onchange = e => { F.newOnly = e.target.checked; renderDeals(); };
 
 function renderDeals() {
   const rows = S.vinted.rows || [];
-  ["match", "review", "rejected"].forEach(v => $("#n-" + v).textContent = rows.filter(r => r.verdict === v).length);
+  ["match", "review", "lot", "more", "rejected"].forEach(v => $("#n-" + v).textContent = rows.filter(r => r.verdict === v).length);
   const sel = $("#cardFilter"), cur = F.card;
   const cards = [...new Set(rows.map(r => r.query_card))];
   sel.innerHTML = '<option value="">Toutes les cartes</option>' + cards.map(c => `<option ${c === cur ? "selected" : ""}>${esc(c)}</option>`).join("");
   let list = rows.filter(r => (F.verdict === "all" || r.verdict === F.verdict) && (!F.card || r.query_card === F.card) && (!F.newOnly || r.new));
-  const key = {deal: r => r.deal_ratio ?? 9, price: r => r.price ?? 1e9, score: r => -(r.rule_score || 0)}[F.sort];
-  list = [...list].sort((a, b) => key(a) - key(b));
+  const key = {deal: r => r.deal_ratio ?? (r.price ?? 1e9) / 1e6, price: r => r.price ?? 1e9, score: r => -(r.rule_score || 0)}[F.sort];
   if (!rows.length) {
     $("#deals").innerHTML = (S.wishlist || []).length
-      ? `<div class="empty">Pas encore de résultats.<br><br><button class="btn primary" data-run="vinted">Chercher sur Vinted</button></div>`
+      ? `<div class="empty">Pas encore de résultats.<br><br><button class="btn primary" onclick="searchVinted()">Chercher sur Vinted</button></div>`
       : `<div class="empty">Ta wishlist est vide : ajoute d'abord les cartes que tu cherches.<br><br><button class="btn primary" onclick="show('wishlist');loadSets()">Ajouter des cartes</button></div>`;
   } else if (!list.length) {
     $("#deals").innerHTML = `<div class="empty">Rien dans ce filtre.</div>`;
   } else {
-    $("#deals").innerHTML = '<div class="grid">' + list.map(dealCard).join("") + "</div>";
+    // one block per card, best offers first; blocks ordered by their best deal
+    const byId = {}, wlById = Object.fromEntries((S.wishlist || []).map(c => [c.id, c]));
+    list.forEach(r => (byId[r.card_id] = byId[r.card_id] || []).push(r));
+    const VO = {match: 0, review: 1, lot: 2, more: 3, rejected: 4};
+    const groups = Object.entries(byId).map(([id, rs]) => [id, rs.sort((a, b) => (VO[a.verdict] - VO[b.verdict]) || (key(a) - key(b)))]).sort((a, b) => key(a[1][0]) - key(b[1][0]));
+    $("#deals").innerHTML = groups.map(([id, rs]) => {
+      const c = wlById[id] || {}, img = c.image ? c.image.replace("/high.", "/low.") : "";
+      const shown = F.verdict === "more" || F.verdict === "rejected" || F.verdict === "all" ? rs.slice(0, 24) : rs;
+      return `<div class="grp"><div class="gh">${img ? `<img src="${safeUrl(img)}" alt="">` : ""}
+        <div class="t"><b>${esc(rs[0].query_card)}</b><span>${esc(c.set_name || "")}${c.max_price ? " · prix max " + eur(c.max_price) : ""} · ${rs.length} annonce(s) dans ce filtre</span></div>
+        <button class="btn small" onclick="searchVinted(['${esc(id)}'])">Relancer cette carte</button></div>
+        <div class="grid">${shown.map(dealCard).join("")}</div>${rs.length > shown.length ? `<p class="meta">+ ${rs.length - shown.length} autres</p>` : ""}</div>`;
+    }).join("");
   }
   $("#dealsFoot").textContent = S.vinted.at ? `Dernière recherche ${ago(S.vinted.at)} · vinted.${S.vinted.domain || "fr"}${S.vinted.demo ? " · données de démo (liens factices)" : ""}` : "";
   bindRunButtons();
@@ -399,7 +452,7 @@ function renderDeals() {
 function dealCard(r) {
   const ratio = r.deal_ratio, pct = ratio ? Math.min(ratio, 1) * 100 : 0;
   const col = ratio == null ? "#ccc" : ratio <= .75 ? "var(--ok)" : ratio <= .9 ? "#7aa63a" : ratio <= 1 ? "var(--warn)" : "var(--bad)";
-  const vb = {match: ["ok", "Match"], review: ["warn", "À vérifier"], rejected: ["bad", "Rejetée"]}[r.verdict];
+  const vb = {match: ["ok", r.rank ? "N°" + r.rank : "Top"], review: ["warn", "À vérifier"], lot: ["info", "Lot"], more: ["", "Autre offre"], rejected: ["bad", "Rejetée"]}[r.verdict] || ["", r.verdict];
   const badges = [`<span class="b ${vb[0]}">${vb[1]}</span>`];
   if (r.new) badges.push('<span class="b new">Nouveau</span>');
   if (r.guess_lang || r.ai_lang) badges.push(`<span class="b">${esc((r.ai_lang || r.guess_lang).toUpperCase())}</span>`);
@@ -446,30 +499,37 @@ function renderInventory() {
     : `<tr><td colspan="5" style="color:var(--muted)">Rien à afficher.</td></tr>`;
 }
 let shopRows = [];
-function renderShopList() {
-  if (!shopRows._loaded) { shopRows = (S.shops || []).map(s => ({...s})); shopRows._loaded = true; }
-  $("#shopList").innerHTML = shopRows.map((s, i) => `<tr>
+const TRACKED = ["shopify", "woocommerce"];
+function shopRowHtml(s, i) {
+  const st = s.engine ? `<span class="b ${TRACKED.includes(s.engine) ? "ok" : "bad"}">${esc({blocked: "bloqué", unsupported: "non compatible", error: "injoignable"}[s.engine] || s.engine)}</span>` : (s.url ? '<span class="meta">à détecter</span>' : '<span class="b">magasin physique</span>');
+  return `<tr>
     <td><input type="text" data-i="${i}" data-k="name" value="${esc(s.name)}"></td>
-    <td><input type="url" data-i="${i}" data-k="url" value="${esc(s.url)}" placeholder="https://…"></td>
+    <td><input type="url" data-i="${i}" data-k="url" value="${esc(s.url || "")}" placeholder="https://… (facultatif)"></td>
     <td><input type="text" data-i="${i}" data-k="address" value="${esc(s.address || "")}" placeholder="Rua …, Lisboa"></td>
     <td><input type="text" data-i="${i}" data-k="city" value="${esc(s.city || "")}" placeholder="Lisboa"></td>
-    <td>${s.engine ? `<span class="b ${["shopify", "woocommerce"].includes(s.engine) ? "ok" : "bad"}">${esc({blocked: "bloqué", unsupported: "non compatible", error: "erreur"}[s.engine] || s.engine)}</span>` : '<span class="meta">auto</span>'}</td>
-    <td><button class="btn small" data-detect="${i}">Détecter</button> <button class="btn small" data-del="${i}">Retirer</button></td></tr>`).join("")
-    || `<tr><td colspan="6" style="color:var(--muted)">Aucune boutique dans ce profil. Ajoute celles que tu suis (adresse ci-dessus ou annuaire).</td></tr>`;
-  $$("#shopList input").forEach(inp => inp.oninput = () => { shopRows[inp.dataset.i][inp.dataset.k] = inp.value; });
-  $$("#shopList [data-del]").forEach(b => b.onclick = () => { shopRows.splice(+b.dataset.del, 1); renderShopList(); });
-  $$("#shopList [data-detect]").forEach(b => b.onclick = async () => {
+    <td>${st}</td>
+    <td>${s.url ? `<button class="btn small" data-detect="${i}">Détecter</button> ` : ""}<button class="btn small" data-del="${i}">Retirer</button></td></tr>`;
+}
+function renderShopList() {
+  if (!shopRows._loaded) { shopRows = (S.shops || []).map(s => ({...s})); shopRows._loaded = true; }
+  const tracked = [], other = [];
+  shopRows.forEach((s, i) => (TRACKED.includes(s.engine) ? tracked : other).push(shopRowHtml(s, i)));
+  $("#shopList").innerHTML = tracked.join("") || `<tr><td colspan="6" style="color:var(--muted)">Aucune boutique compatible pour l'instant.</td></tr>`;
+  $("#shopList2").innerHTML = other.join("") || `<tr><td colspan="6" style="color:var(--muted)">Rien ici. Les boutiques non compatibles ou sans site arrivent dans cette liste.</td></tr>`;
+  $$("#shopList input, #shopList2 input").forEach(inp => inp.oninput = () => { shopRows[inp.dataset.i][inp.dataset.k] = inp.value; });
+  $$("#shopList [data-del], #shopList2 [data-del]").forEach(b => b.onclick = () => { shopRows.splice(+b.dataset.del, 1); renderShopList(); $("#saveShops").click(); });
+  $$("#shopList [data-detect], #shopList2 [data-detect]").forEach(b => b.onclick = async () => {
     const s = shopRows[+b.dataset.detect]; b.disabled = true; b.textContent = "…";
-    try { const r = await api("/api/shops/detect", {url: s.url}); s.engine = r.engine === "error" ? "error" : r.engine; toast(r.engine === "unsupported" ? "Pas compatible pour l'instant" : r.engine === "error" ? ("Erreur : " + (r.error || "")) : "Compatible : " + r.engine); }
+    try { const r = await api("/api/shops/detect", {url: s.url}); s.engine = r.engine; toast(TRACKED.includes(r.engine) ? "Compatible : " + r.engine : "Pas compatible (" + r.engine + ") : reste sur la carte"); }
     catch (e) { toast(e.message); }
-    renderShopList();
+    renderShopList(); $("#saveShops").click();
   });
 }
 $("#addShop").onclick = () => { shopRows.push({name: "", url: ""}); renderShopList(); };
 $("#saveShops").onclick = async () => {
   const clean = shopRows.filter(s => s.name && (s.url || s.address || s.city)).map(s => ({name: s.name.trim(), url: (s.url || "").trim(),
     ...(s.address ? {address: s.address.trim()} : {}), ...(s.city ? {city: s.city.trim()} : {}),
-    ...(["shopify", "woocommerce"].includes(s.engine) ? {engine: s.engine} : {})}));
+    ...(s.lat != null ? {lat: s.lat, lng: s.lng} : {}), ...(s.engine ? {engine: s.engine} : {})}));
   try { await api("/api/shops", {shops: clean}); toast("Boutiques enregistrées"); S.shops = clean; } catch (e) { toast(e.message); }
 };
 
@@ -508,12 +568,14 @@ function renderSettings() {
   const s = S.settings;
   $("#s-demo").checked = !!s.demo_mode; $("#s-delay").value = s.vinted_delay;
   try { $("#s-bn").checked = localStorage.getItem("bn") === "1"; } catch (_) {}
-  $("#s-ai").checked = !!s.use_ai; $("#s-shot").value = s.screenshot_engine || "auto"; $("#s-key").value = s.anthropic_api_key; $("#s-tg").value = s.telegram_bot_token; $("#s-chat").value = s.telegram_chat_id;
+  $("#s-ai").checked = !!s.use_ai; $("#s-shot").value = s.screenshot_engine || "auto";
+  $("#s-topk").value = s.vinted_top_k || 3; $("#s-gkey").value = s.google_places_key || ""; $("#s-key").value = s.anthropic_api_key; $("#s-tg").value = s.telegram_bot_token; $("#s-chat").value = s.telegram_chat_id;
 }
 $("#saveSettings").onclick = async () => {
   try {
     await api("/api/settings", {demo_mode: $("#s-demo").checked, vinted_delay: +$("#s-delay").value || 3,
-      use_ai: $("#s-ai").checked, screenshot_engine: $("#s-shot").value, anthropic_api_key: $("#s-key").value.trim(), telegram_bot_token: $("#s-tg").value.trim(), telegram_chat_id: $("#s-chat").value.trim()});
+      use_ai: $("#s-ai").checked, screenshot_engine: $("#s-shot").value,
+      vinted_top_k: Math.max(1, Math.min(10, +$("#s-topk").value || 3)), google_places_key: $("#s-gkey").value.trim(), anthropic_api_key: $("#s-key").value.trim(), telegram_bot_token: $("#s-tg").value.trim(), telegram_chat_id: $("#s-chat").value.trim()});
     const bn = $("#s-bn").checked;
     if (bn && "Notification" in window && Notification.permission !== "granted") await Notification.requestPermission();
     try { localStorage.setItem("bn", bn ? "1" : "0"); } catch (_) {}
@@ -528,21 +590,27 @@ function bindRunButtons() { $$("[data-run]").forEach(b => b.onclick = () => run(
 $("#runAll").onclick = () => run("all");
 $("#logBtn").onclick = () => $("#log").classList.toggle("show");
 let polling = null;
-async function run(kind) {
-  const r = await api("/api/run/" + kind, {});
+async function run(kind, params) {
+  const r = await api("/api/run/" + kind, params || {});
   if (!r.started) toast("Une tâche tourne déjà");
   renderJob(r.job); poll();
 }
+let statusDismissed = false;
 function renderJob(j) {
   const busy = j && j.running;
-  $("#status").classList.toggle("show", !!busy || !!(j && j.error));
+  if (busy) statusDismissed = false;
+  $("#status").classList.toggle("show", !statusDismissed && (!!busy || !!(j && j.error)));
   $("#statusText").textContent = busy ? `En cours : ${({vinted: "recherche Vinted", shops: "vérification des boutiques", all: "actualisation complète", detect: "détection des boutiques", diag: "diagnostic"})[j.kind] || j.kind}… ${(j.log || []).slice(-1)[0] || ""}`
     : (j && j.error ? "Erreur : " + j.error : "");
   $(".spin").style.display = busy ? "" : "none";
+  $("#stopBtn").style.display = busy ? "" : "none";
+  if (!busy && !(j && j.error)) $("#log").classList.remove("show");  // never leave the journal open over the pages
   $("#log").textContent = (j && j.log || []).join("\n");
   $("#log").scrollTop = 1e9;
-  $$("[data-run], #runAll").forEach(b => b.disabled = !!busy);
+  $$("[data-run], #runAll, #searchSel").forEach(b => b.disabled = !!busy);
 }
+$("#stopBtn").onclick = async () => { await api("/api/job/stop", {}); toast("Arrêt en cours… (fin de la requête en cours)"); };
+$("#statusClose").onclick = () => { statusDismissed = true; $("#status").classList.remove("show"); $("#log").classList.remove("show"); };
 function poll() {
   clearInterval(polling);
   polling = setInterval(async () => {
@@ -704,10 +772,30 @@ function renderShot() {
       return `<tr><td><input type="checkbox" data-si="${i}" ${best && !dup ? "checked" : ""} ${cur ? "" : "disabled"}></td>
         <td><b>${esc(d.name || "?")}</b> <span class="meta">${esc(d.number || "")}${d.set_total ? "/" + esc(d.set_total) : ""} ${esc(d.set_name || "")}</span></td>
         <td style="display:flex;gap:10px;align-items:center">${cur ? `<img src="${safeUrl(cur.image)}" alt="" data-simg="${i}">` : ""}
-          ${alts.length ? `<select data-sa="${i}" style="max-width:360px">${opts}</select>` : '<span class="why">introuvable dans le catalogue</span>'}</td>
-        <td>${dup ? '<span class="b">déjà dans la wishlist</span>' : best ? '<span class="b ok">sûr</span>' : cur ? '<span class="b warn">à vérifier</span>' : ""}</td></tr>`;
+          ${alts.length ? `<select data-sa="${i}" style="max-width:360px">${opts}</select>` : ""}
+          ${!alts.length || r.manual ? `<span style="display:flex;gap:6px;align-items:center">${alts.length ? "" : '<span class="why">introuvable</span>'}
+            <input type="text" data-ms="${i}" value="${esc(r.mq || d.name || "")}" placeholder="Chercher à la main…" style="width:180px">
+            <button class="btn small" data-msb="${i}">Chercher</button></span>` : ""}</td>
+        <td>${dup ? '<span class="b">déjà dans la wishlist</span>' : best ? '<span class="b ok">sûr</span>' : cur ? '<span class="b warn">à vérifier</span>' : ""}
+          ${alts.length && !r.manual ? `<button class="btn small" data-chg="${i}" title="Chercher une autre carte">Changer</button>` : ""}</td></tr>`;
     }).join("")}</tbody></table></div>
     <div class="tools" style="margin-top:10px"><label class="meta">Prix max € <input type="number" class="smax" style="width:90px" min="0"></label><button class="btn primary sadd">Ajouter la sélection</button></div>`;
+  $$(SHOT_T + " [data-chg]").forEach(b => b.onclick = () => { SHOT[+b.dataset.chg].manual = true; renderShot(); });
+  const manualSearch = async i => {
+    const q = $(`${SHOT_T} [data-ms="${i}"]`).value.trim(); if (!q) return;
+    const btn = $(`${SHOT_T} [data-msb="${i}"]`); btn.disabled = true; btn.textContent = "…";
+    try {
+      const r = await api(`/api/catalog/search?q=${encodeURIComponent(q)}&lang=fr`);
+      let cards = r.cards;
+      if (!cards.length) cards = (await api(`/api/catalog/search?q=${encodeURIComponent(q)}&lang=en`)).cards;
+      SHOT[i].alternatives = cards.slice(0, 40); SHOT[i].best = null; SHOT[i].manual = !cards.length; SHOT[i].mq = q;
+      if (!cards.length) toast("Toujours rien : essaie le nom anglais ou un mot plus court");
+      renderShot();
+      if (cards.length) { const cb = $(`${SHOT_T} [data-si="${i}"]`); if (cb) cb.checked = true; }
+    } catch (e) { toast(e.message); btn.disabled = false; btn.textContent = "Chercher"; }
+  };
+  $$(SHOT_T + " [data-msb]").forEach(b => b.onclick = () => manualSearch(+b.dataset.msb));
+  $$(SHOT_T + " [data-ms]").forEach(inp => inp.onkeydown = e => { if (e.key === "Enter") manualSearch(+inp.dataset.ms); });
   $$(SHOT_T + " [data-sa]").forEach(sel => sel.onchange = () => {
     const r = SHOT[+sel.dataset.sa], a = r.alternatives.find(x => x.id === sel.value);
     const im = $(`${SHOT_T} [data-simg="${sel.dataset.sa}"]`); if (im && a) im.src = a.image;
@@ -731,10 +819,27 @@ async function quickAdd(url, name, address, city) {
   else toast(r.shop.engine === "shopify" || r.shop.engine === "woocommerce" ? `Ajoutée · compatible (${r.shop.engine})` : `Ajoutée · pas encore compatible (${r.shop.engine})`);
 }
 $("#qaGo").onclick = async () => {
-  const u = $("#qaUrl").value.trim(); if (!u) return;
-  $("#qaGo").disabled = true; $("#qaGo").textContent = "Détection…";
-  try { await quickAdd(u); $("#qaUrl").value = ""; } catch (e) { toast(e.message); }
-  $("#qaGo").disabled = false; $("#qaGo").textContent = "Ajouter";
+  const q = $("#qaUrl").value.trim(); if (!q) return;
+  $("#qaGo").disabled = true; $("#qaGo").textContent = "Recherche…"; $("#cands").innerHTML = "";
+  try {
+    const r = await api("/api/shops/lookup", {query: q});
+    const res = r.results.filter(x => !x.error);
+    $("#qaInfo").textContent = (r.results.find(x => x.error) || {}).error || (res.length ? `${res.length} résultat(s) · source : ${r.google ? "Google" : "OpenStreetMap"} — choisis le bon` : "Rien trouvé : essaie le site web ou l'adresse");
+    $("#cands").innerHTML = res.map((c, i) => `<div class="cand"><b>${esc(c.name || "?")}</b>
+      <span>${esc(c.address || c.city || "adresse inconnue")}</span>
+      <span>${c.website ? esc(c.website.replace(/^https?:\/\//, "")) : "pas de site web"} · ${esc(c.source)}</span>
+      <div class="tools" style="margin:8px 0 0"><button class="btn small primary" data-cand="${i}">Ajouter</button></div></div>`).join("");
+    $$("#cands [data-cand]").forEach(b => b.onclick = async () => {
+      const c = res[+b.dataset.cand]; b.disabled = true; b.textContent = "Ajout…";
+      try {
+        const a = await api("/api/shops/add", c);
+        shopRows = a.shops.map(x => ({...x})); shopRows._loaded = true; S.shops = a.shops; renderShopList(); loadDirectory(); mapLoaded = false;
+        toast(a.already ? "Déjà dans ta liste" : TRACKED.includes(a.shop.engine) ? "Ajoutée · stock suivi (" + a.shop.engine + ")" : "Ajoutée · sur la carte (stock non traçable)");
+        $("#cands").innerHTML = ""; $("#qaUrl").value = "";
+      } catch (e) { toast(e.message); b.disabled = false; b.textContent = "Ajouter"; }
+    });
+  } catch (e) { toast(e.message); }
+  $("#qaGo").disabled = false; $("#qaGo").textContent = "Chercher";
 };
 $("#qaUrl").onkeydown = e => { if (e.key === "Enter") $("#qaGo").click(); };
 $("#detectAll").onclick = () => run("detect");
@@ -794,10 +899,92 @@ $("#parseList").onclick = async () => {
   $("#parseList").disabled = false;
 };
 
+// ---------- Vinted: choose which cards to search ----------
+let VSEL = null; try { VSEL = JSON.parse(localStorage.getItem("vsel") || "null"); } catch (_) {}
+function saveVsel() { try { localStorage.setItem("vsel", JSON.stringify(VSEL)); } catch (_) {} updateSearchBtn(); }
+function updateSearchBtn() {
+  const all = (S.wishlist || []).length, n = VSEL ? VSEL.filter(id => (S.wishlist || []).some(c => c.id === id)).length : all;
+  $("#searchSel").textContent = VSEL && n < all ? `Chercher sur Vinted (${n}/${all} cartes)` : `Chercher sur Vinted (${all} cartes)`;
+}
+function renderPicker() {
+  const q = ($("#pickQ").value || "").toLowerCase();
+  const cards = (S.wishlist || []).filter(c => !q || ((c.name_fr || "") + " " + (c.name_en || "") + " " + c.number + " " + (c.set_name || "")).toLowerCase().includes(q));
+  $("#pickList").innerHTML = cards.map(c => `<label><input type="checkbox" value="${esc(c.id)}" ${!VSEL || VSEL.includes(c.id) ? "checked" : ""}> ${esc(c.name_fr || c.name_en)} <span class="meta">${esc(c.number)}/${esc(c.set_total || "?")} · ${esc(c.set_name || "")}</span></label>`).join("") || '<span class="meta">Aucune carte.</span>';
+  $$("#pickList input").forEach(i => i.onchange = () => {
+    const ids = new Set(VSEL || (S.wishlist || []).map(c => c.id));
+    i.checked ? ids.add(i.value) : ids.delete(i.value);
+    VSEL = ids.size === (S.wishlist || []).length ? null : [...ids]; saveVsel();
+  });
+}
+$("#pickBtn").onclick = () => { $("#picker").hidden = !$("#picker").hidden; if (!$("#picker").hidden) renderPicker(); };
+$("#pickQ").oninput = renderPicker;
+$("#pickAll").onclick = () => { VSEL = null; saveVsel(); renderPicker(); };
+$("#pickNone").onclick = () => { VSEL = []; saveVsel(); renderPicker(); };
+function searchVinted(ids) {
+  ids = ids || (VSEL ? VSEL.filter(id => (S.wishlist || []).some(c => c.id === id)) : null);
+  if (ids && !ids.length) return toast("Aucune carte sélectionnée");
+  run("vinted", ids ? {ids} : {});
+}
+$("#searchSel").onclick = () => searchVinted();
+
+// ---------- map side list ----------
+let MPINS = [], MMARK = {}, MKIND = "";
+function renderMapList() {
+  const col = {followed: "#d6402f", directory: "#8a8378", event: "#7b4fc7"};
+  const list = MPINS.map((p, i) => ({p, i})).filter(({p}) => !MKIND || p.kind === MKIND);
+  $("#mlist").innerHTML = list.map(({p, i}) => {
+    const gmaps = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p.address || p.query || p.name);
+    const when = p.date ? new Date(p.date + "T12:00:00").toLocaleDateString("fr-FR", {day: "numeric", month: "short", year: "numeric"}) + (p.date_end ? " → " + new Date(p.date_end + "T12:00:00").toLocaleDateString("fr-FR", {day: "numeric", month: "short"}) : "") + " · " : "";
+    return `<div class="mi" data-mi="${i}"><b><i class="dot" style="background:${col[p.kind]}"></i>${esc(p.name)}</b>
+      <div class="m">${esc(when)}${esc(p.address || p.city || p.query || "")}${p.lat == null ? " · non localisé" : p.approx ? " · approx." : ""}</div>
+      <div class="ln">${p.url ? `<a href="${safeUrl(p.url)}" target="_blank" rel="noopener">Site</a>` : ""}<a href="${gmaps}" target="_blank" rel="noopener">Itinéraire</a>
+      ${p.engine ? `<span class="meta">${TRACKED.includes(p.engine) ? "stock suivi" : "carte uniquement"}</span>` : ""}</div></div>`;
+  }).join("") || '<p class="meta" style="padding:12px">Rien dans ce filtre.</p>';
+  $$("#mlist [data-mi]").forEach(el => el.onclick = () => focusPin(+el.dataset.mi, false));
+}
+function focusPin(i, fromMap) {
+  if (!MAP) { $$("#mlist .mi").forEach(x => x.classList.toggle("on", +x.dataset.mi === i)); return; }
+  $$("#mlist .mi").forEach(x => x.classList.toggle("on", +x.dataset.mi === i));
+  Object.entries(MMARK).forEach(([k, m]) => m.setStyle({radius: +k === i ? 13 : m.options.baseR, weight: +k === i ? 3 : 2}));
+  const m = MMARK[i];
+  if (m) { if (!fromMap) MAP.setView(m.getLatLng(), Math.max(MAP.getZoom(), 13)); m.openPopup(); m.bringToFront(); }
+  if (fromMap) { const el = $(`#mlist [data-mi="${i}"]`); if (el) el.scrollIntoView({block: "nearest", behavior: "smooth"}); }
+}
+$$("#mchips .chip").forEach(c => c.onclick = () => { MKIND = c.dataset.mk; $$("#mchips .chip").forEach(x => x.classList.toggle("on", x === c)); renderMapList(); });
+
+// ---------- card shows ----------
+let RKIND = "products", EVTS = null;
+$$("[data-rk]").forEach(c => c.onclick = () => { RKIND = c.dataset.rk; $$("[data-rk]").forEach(x => x.classList.toggle("on", x === c)); loadReleases(); });
+async function renderShows() {
+  if (!EVTS) EVTS = await api("/api/events");
+  const past = $("#relPast").checked, today = new Date().toISOString().slice(0, 10);
+  const list = EVTS.events.filter(e => past || (e.date_end || e.date) >= today).sort((a, b) => a.date.localeCompare(b.date));
+  $("#relInfo").textContent = `Card shows au Portugal (achat, vente, échange — pas de compétition). Mis à jour le ${EVTS.updated}. Vérifie toujours le site officiel avant d'y aller.`;
+  let cur = "", html = "";
+  list.forEach(e => {
+    const d = new Date(e.date + "T12:00:00"), month = d.toLocaleDateString("fr-FR", {month: "long", year: "numeric"});
+    if (month !== cur) { html += `<div class="month">${month}</div>`; cur = month; }
+    const isPast = (e.date_end || e.date) < today;
+    const gmaps = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(e.address || e.city);
+    html += `<div class="rel ${isPast ? "past" : ""}"><div class="d"><b>${d.getDate()}${e.date_end ? "–" + new Date(e.date_end + "T12:00:00").getDate() : ""}</b><span>${d.toLocaleDateString("fr-FR", {month: "short"})}</span></div>
+      <div class="g"><b>${esc(e.title)}</b><span>${esc([e.venue, e.address || e.city].filter(Boolean).join(" · "))}</span><span>${esc(e.details || "")}</span></div>
+      <span class="b" style="background:#efe8fb;color:#5b3aa0;border-color:transparent">card show</span>
+      <a class="btn small" href="${gmaps}" target="_blank" rel="noopener">Itinéraire</a>
+      ${e.url ? `<a class="btn small" href="${safeUrl(e.url)}" target="_blank" rel="noopener">Site</a>` : ""}</div>`;
+  });
+  $("#rels").innerHTML = html || '<div class="empty">Aucun card show à venir dans la liste.</div>';
+}
+
 // ---------- map ----------
 let MAP = null, mapLayer = null, mapLoaded = false;
+let mapTries = 0;
 async function loadMap() {
-  if (!window.L) { setTimeout(loadMap, 300); return; }
+  if (!window.L && mapTries++ < 20) { setTimeout(loadMap, 300); return; }
+  if (!window.L) {  // map tiles/library unreachable: still show the list
+    const r = await api("/api/map"); MPINS = r.pins; MMARK = {}; renderMapList();
+    $("#map").innerHTML = '<div class="empty" style="border:0;margin-top:200px">Carte indisponible (pas d\'accès à OpenStreetMap). La liste reste utilisable.</div>';
+    return;
+  }
   if (!MAP) {
     MAP = L.map("map").setView([39.5, -8.2], 7);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19, attribution: "© OpenStreetMap"}).addTo(MAP);
@@ -809,17 +996,21 @@ async function loadMap() {
   if (mapLayer) mapLayer.remove();
   mapLayer = L.layerGroup().addTo(MAP);
   const pts = [];
-  r.pins.forEach(p => {
+  MPINS = r.pins; MMARK = {};
+  r.pins.forEach((p, i) => {
     if (p.lat == null) return;
-    const col = p.kind === "followed" ? "#d6402f" : "#8a8378";
-    const m = L.circleMarker([p.lat, p.lng], {radius: p.kind === "followed" ? 9 : 7, color: "#fff", weight: 2, fillColor: col, fillOpacity: .95}).addTo(mapLayer);
-    m.bindPopup(`<b>${esc(p.name)}</b>${p.approx ? " <i>(approx.)</i>" : ""}<br>${esc(p.query)}${p.note ? "<br><small>" + esc(p.note) + "</small>" : ""}${p.url ? `<br><a href="${safeUrl(p.url)}" target="_blank" rel="noopener">Site</a>` : ""}<br><small>${p.kind === "followed" ? "Suivie" : "Dans l'annuaire"}</small>`);
+    const col = {followed: "#d6402f", directory: "#8a8378", event: "#7b4fc7"}[p.kind];
+    const baseR = p.kind === "directory" ? 7 : 9;
+    const m = L.circleMarker([p.lat, p.lng], {radius: baseR, baseR, color: "#fff", weight: 2, fillColor: col, fillOpacity: .95}).addTo(mapLayer);
+    MMARK[i] = m; m.on("click", () => focusPin(i, true));
+    m.bindPopup(`<b>${esc(p.name)}</b>${p.approx ? " <i>(approx.)</i>" : ""}<br>${esc(p.query)}${p.note ? "<br><small>" + esc(p.note) + "</small>" : ""}${p.url ? `<br><a href="${safeUrl(p.url)}" target="_blank" rel="noopener">Site</a>` : ""}<br><small>${{followed: "Ma boutique", directory: "Dans l'annuaire", event: "Card show"}[p.kind]}</small>`);
     pts.push([p.lat, p.lng]);
   });
   if (r.home) { L.circleMarker([r.home.lat, r.home.lng], {radius: 8, color: "#fff", weight: 2, fillColor: "#2a5db0", fillOpacity: 1}).addTo(mapLayer).bindPopup("Toi · " + esc(r.home.label)); pts.push([r.home.lat, r.home.lng]); }
   if (pts.length) MAP.fitBounds(pts, {padding: [30, 30], maxZoom: 12});
   const missing = r.pins.filter(p => p.lat == null).length;
   $("#mapInfo").textContent = `${r.pins.length - missing} boutique(s) placée(s)` + (missing ? ` · ${missing} sans adresse ni ville` : "") + (r.home ? "" : " · ajoute ta ville dans Réglages → Profil");
+  renderMapList();
   mapLoaded = true;
 }
 $("#mapReload").onclick = () => { mapLoaded = false; loadMap(); };
@@ -827,6 +1018,7 @@ $("#mapReload").onclick = () => { mapLoaded = false; loadMap(); };
 // ---------- releases ----------
 let RELS = null;
 async function loadReleases() {
+  if (RKIND === "shows") return renderShows();
   if (!RELS) RELS = await api("/api/releases");
   const reg = $("#relRegion").value, past = $("#relPast").checked, today = new Date().toISOString().slice(0, 10);
   const list = RELS.releases.filter(r => (!reg || r.region === reg || r.region === "WW") && (past || (r.date_end || r.date) >= today.slice(0, r.date.length)))
@@ -846,7 +1038,7 @@ async function loadReleases() {
   });
   $("#rels").innerHTML = html || '<div class="empty">Rien à venir pour ce filtre.</div>';
 }
-$("#relRegion").onchange = loadReleases; $("#relPast").onchange = loadReleases;
+$("#relRegion").onchange = loadReleases; /* region filter applies to products */ $("#relPast").onchange = loadReleases;
 
 // ---------- diagnostic ----------
 async function loadDiag() {

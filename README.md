@@ -132,3 +132,19 @@ Vinted retired its old search address (`/api/v2/catalog/items`). The app now:
 2. searches `api.vinted.<country>/svc-catalogue/items`, dropping any filter the server rejects with a 400 error,
 3. if the API still refuses, falls back to reading the website's results page.
 *Réglages → Diagnostic* shows every step with its HTTP code.
+
+## Vinted results, kept readable
+
+- **Meilleures offres**: the N cheapest correct listings per card (single cards only, with the exact collector number). N is set in Réglages, 3 by default.
+- **Lots**: group sales that contain the card, shown separately.
+- **À vérifier** and **Autres offres**: the rest, one click away.
+- *Choisir les cartes…* searches only a selection; the results for the other cards are kept. **Arrêter** in the status bar stops a running search.
+- Queries: one per language you want the card in (French name, English name) + the collector number. Vinted matches the seller's title as written, so a French title only matches the French name; the number is the same in every language.
+
+## Shops
+
+*Ajouter une boutique* takes a name, a website or an address. The site's own data, OpenStreetMap (free) or Google Places (optional key in Réglages) fill in the rest. Shops whose stock can't be tracked go to the map-only list.
+
+## Card shows
+
+`events.json` lists Portugal's card shows (buy / sell / trade, no competition). They appear in *Sorties → Card shows*, on the map (purple) and in `calendar.ics`.
