@@ -162,7 +162,7 @@ def read_screenshot(image_b64: str, media_type: str = "image/jpeg") -> list[dict
 
 
 def _num(v) -> str:
-    return (str(v or "").strip().lstrip("0")) or ""
+    return (str(v or "").strip().lower().lstrip("0")) or ""
 
 
 def resolve(detected: dict, lang_order=("fr", "en")) -> dict:
@@ -242,3 +242,52 @@ def resolve_by_number(detected: dict, lang: str = "fr") -> dict:
     tie = len(cands) > 1 and cands[1]["score"] == cands[0]["score"]
     best = cands[0] if (len(cands) == 1 or (not tie and cands[0]["score"] >= 3)) else None
     return {"detected": detected, "best": best, "alternatives": cands[:6]}
+
+
+# ---------- pasted list import ----------
+# One card per line, e.g. "Dracaufeu ex 199/165", "Hyper Ball 68a/73", "Poké Ball SWSH146".
+PROMO_RE = re.compile(r"\b(SWSH|SVP|SV|SM|XY|BW|HGSS|DP)\s?-?(\d{1,3})\b", re.I)
+PROMO_SETS = {"SWSH": "swshp", "SVP": "svp", "SV": "svp", "SM": "smp", "XY": "xyp", "BW": "bwp", "HGSS": "hgssp", "DP": "dpp"}
+
+
+def parse_text_list(text: str) -> list[dict]:
+    from ocr import NUM_RE, _clean_name  # same rules as the screenshot reader
+    out = []
+    for raw in (text or "").splitlines():
+        line = raw.strip().lstrip("-•*").strip()
+        if not line or line.startswith("#"):
+            continue
+        m = NUM_RE.search(line)
+        pm = PROMO_RE.search(line)
+        if m:
+            name = _clean_name(line[:m.start()] + " " + line[m.end():])
+            out.append({"name": name, "number": m.group(1), "set_total": m.group(2), "raw": raw})
+        elif pm:
+            name = _clean_name(PROMO_RE.sub(" ", line))
+            out.append({"name": name, "promo": pm.group(1).upper(), "number": pm.group(2), "set_total": None, "raw": raw})
+        else:
+            out.append({"name": _clean_name(line), "number": None, "set_total": None, "raw": raw})
+    return out
+
+
+def resolve_promo(detected: dict, lang: str = "fr") -> dict:
+    set_id = PROMO_SETS.get(detected.get("promo", ""), "")
+    num = _num(detected.get("number"))
+    cands = []
+    for c in _set_cards(set_id, lang) if set_id else []:
+        digits = _num(re.sub(r"\D", "", str(c.get("localId", ""))))
+        if digits == num:
+            cands.append({"id": c.get("id"), "name": c.get("name"), "number": str(c.get("localId")), "set_id": set_id,
+                          "set_name": "Promos %s" % detected["promo"], "set_total": "", "secret": False,
+                          "image": _img(c.get("image")), "score": 3 + _name_score(detected.get("name", ""), c.get("name", ""))})
+    cands.sort(key=lambda c: -c["score"])
+    return {"detected": detected, "best": cands[0] if len(cands) == 1 or (cands and cands[0]["score"] > cands[1]["score"]) else None,
+            "alternatives": cands[:6]}
+
+
+def resolve_any(detected: dict) -> dict:
+    if detected.get("promo"):
+        return resolve_promo(detected)
+    if detected.get("number") and detected.get("set_total"):
+        return resolve_by_number(detected)
+    return resolve(detected)

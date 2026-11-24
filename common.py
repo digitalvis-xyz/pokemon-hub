@@ -99,19 +99,28 @@ class Http:
         if headers:
             h.update(headers)
         req = urllib.request.Request(url, headers=h)
+        self.last_headers = {}
         try:
             with self.opener.open(req, timeout=self.timeout) as r:
+                self.last_headers = dict(r.headers.items())
                 raw = r.read()
                 if r.headers.get("Content-Encoding") == "gzip":
                     raw = gzip.decompress(raw)
                 return r.status, raw.decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
+            self.last_headers = dict(e.headers.items()) if e.headers else {}
             body = e.read()
             try:
                 body = gzip.decompress(body)
             except OSError:
                 pass
             return e.code, body.decode("utf-8", "replace")
+
+    def cookie(self, name: str) -> str | None:
+        for c in self.jar:
+            if c.name == name:
+                return c.value
+        return None
 
     def get_json(self, url: str, params: dict | None = None, headers: dict | None = None):
         status, body = self.get(url, params, headers)
@@ -190,4 +199,106 @@ def ensure_data() -> list[str]:
         legacy["demo_mode"] = False
         save_json(data_path("settings.json"), legacy)
         log.append("réglages repris, mode démo désactivé")
+    return log
+
+
+# ---------- profiles ----------
+# Each profile has its own wishlist, shops, city and results: data/profiles/<id>/
+PROFILES_DIR = os.path.join(DATA_DIR, "profiles")
+_ACTIVE_FILE = os.path.join(DATA_DIR, "active_profile.txt")
+_PROFILE_STATE = ("last_vinted.json", "last_shops.json", "vinted_seen.json", "shops_state.json",
+                  "notifications.json", "last_vinted_demo.json", "last_shops_demo.json")
+
+
+def _slug(name: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "-", norm(name)).strip("-")
+    return s[:30] or "profil"
+
+
+def active_profile() -> str:
+    try:
+        with open(_ACTIVE_FILE, encoding="utf-8") as f:
+            pid = f.read().strip()
+        if pid and os.path.isdir(os.path.join(PROFILES_DIR, pid)):
+            return pid
+    except OSError:
+        pass
+    return "default"
+
+
+def set_active_profile(pid: str) -> None:
+    if not os.path.isdir(os.path.join(PROFILES_DIR, pid)):
+        raise ValueError("profil inconnu")
+    with open(_ACTIVE_FILE, "w", encoding="utf-8") as f:
+        f.write(pid)
+
+
+def profile_dir(pid: str | None = None) -> str:
+    d = os.path.join(PROFILES_DIR, pid or active_profile())
+    os.makedirs(os.path.join(d, "state"), exist_ok=True)
+    return d
+
+
+def pfile(name: str, pid: str | None = None) -> str:
+    return os.path.join(profile_dir(pid), name)
+
+
+def pstate(name: str, pid: str | None = None) -> str:
+    return os.path.join(profile_dir(pid), "state", name)
+
+
+DEFAULT_PROFILE = {"name": "Moi", "city": "", "country": "PT", "vinted_domain": "pt", "languages": ["fr", "en"]}
+
+
+def get_profile(pid: str | None = None) -> dict:
+    p = dict(DEFAULT_PROFILE)
+    p.update(load_json(pfile("profile.json", pid), {}))
+    p["id"] = pid or active_profile()
+    return p
+
+
+def save_profile(data: dict, pid: str | None = None) -> dict:
+    p = get_profile(pid)
+    for k in ("name", "city", "country", "vinted_domain", "languages", "lat", "lng"):
+        if k in data:
+            p[k] = data[k]
+    save_json(pfile("profile.json", pid), {k: v for k, v in p.items() if k != "id"})
+    return p
+
+
+def list_profiles() -> list[dict]:
+    os.makedirs(PROFILES_DIR, exist_ok=True)
+    return [get_profile(d) for d in sorted(os.listdir(PROFILES_DIR)) if os.path.isdir(os.path.join(PROFILES_DIR, d))]
+
+
+def create_profile(name: str, city: str = "") -> dict:
+    base = _slug(name)
+    pid, n = base, 2
+    while os.path.exists(os.path.join(PROFILES_DIR, pid)):
+        pid, n = "%s-%d" % (base, n), n + 1
+    profile_dir(pid)
+    save_json(pfile("wishlist.json", pid), {"cards": []})
+    save_json(pfile("shops.json", pid), {"keywords": ["pokemon", "pokémon"], "shops": []})
+    return save_profile({"name": name.strip() or "Profil", "city": city}, pid)
+
+
+def ensure_profiles() -> list[str]:
+    """Move the single-user data/ files into data/profiles/default/ (once)."""
+    log = ensure_data()
+    if os.path.isdir(os.path.join(PROFILES_DIR, "default")):
+        return log
+    d = profile_dir("default")
+    for name in ("wishlist.json", "shops.json"):
+        src = data_path(name)
+        if os.path.exists(src):
+            os.replace(src, os.path.join(d, name))
+        elif not os.path.exists(os.path.join(d, name)):
+            save_json(os.path.join(d, name), {"cards": []} if name == "wishlist.json" else {"keywords": ["pokemon", "pokémon"], "shops": []})
+    for name in _PROFILE_STATE:
+        src = os.path.join(STATE_DIR, name)
+        if os.path.exists(src):
+            os.replace(src, os.path.join(d, "state", name))
+    settings = load_json(data_path("settings.json"), {})
+    save_profile({"vinted_domain": settings.get("vinted_domain", "pt")}, "default")
+    log.append("profil par défaut créé")
     return log

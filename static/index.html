@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TCG Hub</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <style>
 :root{
   --bg:#f6f4ef; --panel:#fff; --ink:#1d1b18; --muted:#6f6a62; --line:#e6e1d7;
@@ -128,6 +130,18 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
 .dir{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
 .dir div.it{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:center}
 .dir .it .g{flex:1;min-width:0}.dir .it .g b{display:block}.dir .it .g span{font-size:12px;color:var(--muted)}
+#map{height:560px;border-radius:var(--radius);border:1px solid var(--line);background:#e9e5dc}
+.legend{display:flex;gap:14px;align-items:center;font-size:13px;color:var(--muted);margin:10px 0}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.month{margin:22px 0 8px;font-weight:600;color:var(--muted);text-transform:capitalize}
+.rel{display:flex;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.rel .d{width:64px;text-align:center;flex:none}.rel .d b{display:block;font-size:22px;line-height:1}.rel .d span{font-size:11px;color:var(--muted);text-transform:uppercase}
+.rel .g{flex:1;min-width:0}.rel .g b{display:block}.rel .g span{font-size:12px;color:var(--muted)}
+.rel.past{opacity:.5}
+.prof{display:flex;align-items:center;gap:6px}
+.prof select{max-width:150px}
+pre.diag{background:#1d1b18;color:#e9e4d8;font:12px/1.5 ui-monospace,Menlo,monospace;padding:12px;border-radius:10px;max-height:360px;overflow:auto;white-space:pre-wrap}
+textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:8px;padding:10px;width:100%;min-height:220px}
 @media (max-width:760px){nav{margin-left:0;overflow:auto}.bar{flex-wrap:wrap}.form{grid-template-columns:1fr}.form .hint{grid-column:1}}
 </style>
 </head>
@@ -138,10 +152,13 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
     <nav id="nav">
       <button data-v="deals" class="on">Bons plans <span class="count" id="c-deals" hidden></span></button>
       <button data-v="shops">Boutiques <span class="count" id="c-shops" hidden></span></button>
+      <button data-v="map">Carte</button>
+      <button data-v="releases">Sorties</button>
       <button data-v="wishlist">Wishlist</button>
       <button data-v="settings">Réglages</button>
     </nav>
     <div class="spacer"></div>
+    <div class="prof" title="Profil actif"><select id="profSel"></select></div>
     <button class="bell" id="bell" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="count" id="c-notif" hidden></span></button>
     <span class="demo" id="demo" title="Données de démo : cliquez pour ouvrir les réglages" hidden>Mode démo</span>
     <select id="auto" title="Actualisation automatique (tant que la page est ouverte)">
@@ -205,16 +222,33 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
     <div class="dir" id="dir"></div>
     <h3>Boutiques suivies</h3>
     <p class="sub">« Détecter » vérifie si la boutique est compatible (Shopify ou WooCommerce). Les autres demanderont un module RSS plus tard.</p>
-    <div class="panel"><table><thead><tr><th style="width:24%">Nom</th><th>URL</th><th style="width:130px">Moteur</th><th style="width:170px"></th></tr></thead><tbody id="shopList"></tbody></table></div>
+    <div class="panel"><table><thead><tr><th style="width:18%">Nom</th><th>URL</th><th style="width:22%">Adresse (pour la carte)</th><th style="width:110px">Ville</th><th style="width:110px">Moteur</th><th style="width:170px"></th></tr></thead><tbody id="shopList"></tbody></table></div>
     <div class="tools" style="margin-top:10px"><button class="btn" id="addShop">+ Ligne vide</button><button class="btn" id="detectAll">Tout détecter</button><button class="btn primary" id="saveShops">Enregistrer</button></div>
   </section>
 
   <!-- WISHLIST -->
+  <section class="view" id="v-map">
+    <div class="tools"><h2 style="margin-right:auto">Carte des boutiques</h2><button class="btn" id="mapReload">Actualiser</button></div>
+    <div class="legend"><span><i class="dot" style="background:#d6402f"></i>Boutiques suivies</span><span><i class="dot" style="background:#8a8378"></i>Annuaire (pas encore suivies)</span><span><i class="dot" style="background:#2a5db0"></i>Toi (ville du profil)</span><span id="mapInfo"></span></div>
+    <div id="map"></div>
+    <p class="meta">Les boutiques sans adresse précise sont placées au centre de leur ville (« approx. »). Ajoute l'adresse dans Boutiques → Boutiques suivies pour un point exact. Fond de carte © OpenStreetMap.</p>
+  </section>
+
+  <section class="view" id="v-releases">
+    <div class="tools"><h2 style="margin-right:auto">Prochaines sorties</h2>
+      <select id="relRegion"><option value="">Toutes les régions</option><option value="FR">France</option><option value="EN">Anglais</option><option value="JP">Japon</option></select>
+      <label class="toggle"><input type="checkbox" id="relPast"> Afficher les sorties passées</label>
+      <a class="btn" href="/calendar.ics" download="sorties-pokemon.ics">Télécharger (.ics)</a></div>
+    <p class="sub" id="relInfo"></p>
+    <div id="rels"></div>
+    <p class="meta">Pour l'avoir dans Calendrier sur Mac : Fichier → Nouvel abonnement à un calendrier → <code>http://127.0.0.1:8765/calendar.ics</code> (mis à jour tant que l'app tourne), ou ouvre le fichier .ics téléchargé.</p>
+  </section>
+
   <section class="view" id="v-wishlist">
     <h2>Wishlist</h2>
     <p class="sub">Chaque carte a un identifiant unique (catalogue open source TCGdex) : c'est lui qui relie Vinted, les boutiques et bientôt les prix.</p>
     <div class="adder">
-      <div class="subtabs"><button class="on" data-st="cat">Rechercher dans le catalogue</button><button data-st="shot">Importer une capture (Pokécardex…)</button></div>
+      <div class="subtabs"><button class="on" data-st="cat">Rechercher dans le catalogue</button><button data-st="shot">Importer une capture (Pokécardex…)</button><button data-st="text">Coller une liste</button></div>
       <div id="st-cat">
         <div class="tools" style="margin:0">
           <input type="text" id="cq" placeholder="Nom ou numéro (ex. Dracaufeu, Noctali, 199)" style="width:280px">
@@ -236,6 +270,12 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
           <input type="file" id="file" accept="image/*" hidden></div>
         <div id="shotRes"></div>
       </div>
+      <div id="st-text" hidden>
+        <p class="meta" style="margin-top:0">Une carte par ligne : nom + numéro (« Dracaufeu ex 199/165 », « Hyper Ball 68a/73 ») ou code promo (« Poké Ball SWSH146 »). Les lignes qui commencent par # sont ignorées.</p>
+        <textarea id="pasteList" placeholder="Dracaufeu ex 199/165&#10;Grolem d'Alola GX 113/111&#10;Poké Ball SWSH146"></textarea>
+        <div class="tools" style="margin-top:10px"><button class="btn primary" id="parseList">Analyser la liste</button><span class="meta" id="parseInfo"></span></div>
+        <div id="textRes"></div>
+      </div>
     </div>
     <h3>Ma wishlist</h3>
     <div class="panel" style="overflow:auto"><table style="min-width:1050px">
@@ -246,13 +286,29 @@ td input[type=text],td input[type=number],td input[type=url]{width:100%}
 
   <!-- SETTINGS -->
   <section class="view" id="v-settings">
-    <h2>Réglages</h2>
+    <h2>Profil</h2>
+    <p class="sub">Chaque profil a sa propre wishlist, ses boutiques, ses résultats et ses notifications.</p>
+    <div class="form" style="margin-bottom:28px">
+      <label>Nom</label><input type="text" id="p-name">
+      <label>Ville</label><input type="text" id="p-city" placeholder="ex. Lisboa">
+      <span class="hint">Sert à te placer sur la carte des boutiques.</span>
+      <label>Vinted</label>
+      <select id="p-domain"><option value="pt">vinted.pt</option><option value="fr">vinted.fr</option><option value="es">vinted.es</option><option value="be">vinted.be</option><option value="it">vinted.it</option><option value="de">vinted.de</option><option value="nl">vinted.nl</option><option value="co.uk">vinted.co.uk</option></select>
+      <label>Langues des cartes</label>
+      <div class="langs" id="p-langs"></div>
+      <span class="hint">Cochées par défaut pour les cartes que tu ajoutes.</span>
+      <span></span>
+      <div class="tools" style="margin:0"><button class="btn primary" id="saveProfile">Enregistrer le profil</button><button class="btn" id="newProfile">+ Nouveau profil</button></div>
+    </div>
+    <h2>Diagnostic</h2>
+    <p class="sub">Teste le catalogue, Vinted et chacune de tes boutiques, et montre exactement ce qui bloque. Copie le rapport et envoie-le moi si quelque chose ne marche pas.</p>
+    <div class="tools"><button class="btn primary" id="runDiag">Lancer le diagnostic</button><button class="btn" id="copyDiag">Copier le rapport</button><span class="meta" id="diagAt"></span></div>
+    <pre class="diag" id="diag">Pas encore lancé.</pre>
+    <h2 style="margin-top:28px">Réglages</h2>
     <p class="sub">Tes données (wishlist, boutiques, réglages) sont dans le dossier <code>data/</code>, sur ton Mac uniquement, jamais envoyées sur GitHub.</p>
     <div class="form">
       <label>Mode démo</label>
       <label class="toggle"><input type="checkbox" id="s-demo"> Utiliser les données de test (rien n'est envoyé sur Internet)</label>
-      <label>Vinted</label>
-      <select id="s-domain"><option>fr</option><option>pt</option><option>es</option><option>be</option><option>it</option><option>de</option><option>nl</option><option>co.uk</option></select>
       <label>Pause entre requêtes (s)</label><input type="number" id="s-delay" min="1" step="0.5" style="width:100px">
       <span class="hint">Plus c'est lent, moins Vinted risque de bloquer. 3 s est raisonnable.</span>
       <label>Vérification IA (Claude)</label>
@@ -303,7 +359,7 @@ $("#demo").onclick = () => show("settings");
 async function load() {
   S = await api("/api/state");
   renderHeader(); renderDeals(); renderShops(); renderWishlist(); renderSettings(); renderJob(S.job);
-  loadNotifs(); loadDirectory();
+  loadNotifs(); loadDirectory(); renderProfile();
 }
 function renderHeader() {
   $("#demo").hidden = !S.settings.demo_mode;
@@ -395,9 +451,11 @@ function renderShopList() {
   $("#shopList").innerHTML = shopRows.map((s, i) => `<tr>
     <td><input type="text" data-i="${i}" data-k="name" value="${esc(s.name)}"></td>
     <td><input type="url" data-i="${i}" data-k="url" value="${esc(s.url)}" placeholder="https://…"></td>
-    <td>${s.engine ? `<span class="b ${s.engine === "unsupported" || s.engine === "error" ? "bad" : "ok"}">${esc(s.engine)}</span>` : '<span class="meta">auto</span>'}</td>
+    <td><input type="text" data-i="${i}" data-k="address" value="${esc(s.address || "")}" placeholder="Rua …, Lisboa"></td>
+    <td><input type="text" data-i="${i}" data-k="city" value="${esc(s.city || "")}" placeholder="Lisboa"></td>
+    <td>${s.engine ? `<span class="b ${["shopify", "woocommerce"].includes(s.engine) ? "ok" : "bad"}">${esc({blocked: "bloqué", unsupported: "non compatible", error: "erreur"}[s.engine] || s.engine)}</span>` : '<span class="meta">auto</span>'}</td>
     <td><button class="btn small" data-detect="${i}">Détecter</button> <button class="btn small" data-del="${i}">Retirer</button></td></tr>`).join("")
-    || `<tr><td colspan="4" style="color:var(--muted)">Aucune boutique. Ajoute celles que tu suis.</td></tr>`;
+    || `<tr><td colspan="6" style="color:var(--muted)">Aucune boutique dans ce profil. Ajoute celles que tu suis (adresse ci-dessus ou annuaire).</td></tr>`;
   $$("#shopList input").forEach(inp => inp.oninput = () => { shopRows[inp.dataset.i][inp.dataset.k] = inp.value; });
   $$("#shopList [data-del]").forEach(b => b.onclick = () => { shopRows.splice(+b.dataset.del, 1); renderShopList(); });
   $$("#shopList [data-detect]").forEach(b => b.onclick = async () => {
@@ -409,7 +467,9 @@ function renderShopList() {
 }
 $("#addShop").onclick = () => { shopRows.push({name: "", url: ""}); renderShopList(); };
 $("#saveShops").onclick = async () => {
-  const clean = shopRows.filter(s => s.name && s.url).map(s => ({name: s.name.trim(), url: s.url.trim(), ...(s.engine && !["unsupported", "error"].includes(s.engine) ? {engine: s.engine} : {})}));
+  const clean = shopRows.filter(s => s.name && (s.url || s.address || s.city)).map(s => ({name: s.name.trim(), url: (s.url || "").trim(),
+    ...(s.address ? {address: s.address.trim()} : {}), ...(s.city ? {city: s.city.trim()} : {}),
+    ...(["shopify", "woocommerce"].includes(s.engine) ? {engine: s.engine} : {})}));
   try { await api("/api/shops", {shops: clean}); toast("Boutiques enregistrées"); S.shops = clean; } catch (e) { toast(e.message); }
 };
 
@@ -446,13 +506,13 @@ $("#saveWl").onclick = async () => {
 // ---------- settings ----------
 function renderSettings() {
   const s = S.settings;
-  $("#s-demo").checked = !!s.demo_mode; $("#s-domain").value = s.vinted_domain; $("#s-delay").value = s.vinted_delay;
+  $("#s-demo").checked = !!s.demo_mode; $("#s-delay").value = s.vinted_delay;
   try { $("#s-bn").checked = localStorage.getItem("bn") === "1"; } catch (_) {}
   $("#s-ai").checked = !!s.use_ai; $("#s-shot").value = s.screenshot_engine || "auto"; $("#s-key").value = s.anthropic_api_key; $("#s-tg").value = s.telegram_bot_token; $("#s-chat").value = s.telegram_chat_id;
 }
 $("#saveSettings").onclick = async () => {
   try {
-    await api("/api/settings", {demo_mode: $("#s-demo").checked, vinted_domain: $("#s-domain").value, vinted_delay: +$("#s-delay").value || 3,
+    await api("/api/settings", {demo_mode: $("#s-demo").checked, vinted_delay: +$("#s-delay").value || 3,
       use_ai: $("#s-ai").checked, screenshot_engine: $("#s-shot").value, anthropic_api_key: $("#s-key").value.trim(), telegram_bot_token: $("#s-tg").value.trim(), telegram_chat_id: $("#s-chat").value.trim()});
     const bn = $("#s-bn").checked;
     if (bn && "Notification" in window && Notification.permission !== "granted") await Notification.requestPermission();
@@ -476,7 +536,7 @@ async function run(kind) {
 function renderJob(j) {
   const busy = j && j.running;
   $("#status").classList.toggle("show", !!busy || !!(j && j.error));
-  $("#statusText").textContent = busy ? `En cours : ${({vinted: "recherche Vinted", shops: "vérification des boutiques", all: "actualisation complète", detect: "détection des boutiques"})[j.kind] || j.kind}… ${(j.log || []).slice(-1)[0] || ""}`
+  $("#statusText").textContent = busy ? `En cours : ${({vinted: "recherche Vinted", shops: "vérification des boutiques", all: "actualisation complète", detect: "détection des boutiques", diag: "diagnostic"})[j.kind] || j.kind}… ${(j.log || []).slice(-1)[0] || ""}`
     : (j && j.error ? "Erreur : " + j.error : "");
   $(".spin").style.display = busy ? "" : "none";
   $("#log").textContent = (j && j.log || []).join("\n");
@@ -488,7 +548,7 @@ function poll() {
   polling = setInterval(async () => {
     const j = await api("/api/job");
     renderJob(j);
-    if (!j.running) { clearInterval(polling); if (j.kind === "detect") shopRows._loaded = false; await load(); if (!j.error) toast("Terminé"); }
+    if (!j.running) { clearInterval(polling); if (j.kind === "detect") shopRows._loaded = false; if (j.kind === "diag") loadDiag(); await load(); if (!j.error) toast("Terminé"); }
   }, 1000);
 }
 // auto refresh while the page is open
@@ -538,7 +598,7 @@ $("#nClear").onclick = async e => { e.stopPropagation(); await api("/api/notific
 // ---------- wishlist: add from catalogue ----------
 $$(".subtabs button").forEach(b => b.onclick = () => {
   $$(".subtabs button").forEach(x => x.classList.toggle("on", x === b));
-  $("#st-cat").hidden = b.dataset.st !== "cat"; $("#st-shot").hidden = b.dataset.st !== "shot";
+  ["cat", "shot", "text"].forEach(k => $("#st-" + k).hidden = b.dataset.st !== k);
 });
 let setsLoaded = false, CAT = {cards: [], page: 1, has_more: false}, picked = new Map();
 async function loadSets() {
@@ -625,16 +685,17 @@ async function handleImage(file) {
   $("#shotRes").innerHTML = "";
   try {
     const r = await api("/api/wishlist/screenshot", {image: data, media_type: "image/jpeg"});
-    SHOT = r.results; renderShot();
+    SHOT = r.results; SHOT_T = "#shotRes"; renderShot();
     drop.innerHTML = `${SHOT.length} carte(s) lue(s) avec ${r.engine === "claude" ? "Claude" : "l'OCR du Mac (gratuit)"}. Glisse une autre capture pour continuer.<br><img src="${data}" alt="">`;
   } catch (e) {
     drop.innerHTML = `<span class="why">${esc(e.message)}</span><br>Réessaie avec une autre capture.`;
   }
 }
+let SHOT_T = "#shotRes";
 function renderShot() {
   const have = new Set(wl.map(c => c.id));
-  if (!SHOT.length) { $("#shotRes").innerHTML = '<p class="meta">Aucune carte reconnue sur cette image.</p>'; return; }
-  $("#shotRes").innerHTML = `<div class="panel" style="margin-top:14px"><table class="rv"><thead><tr><th></th><th>Lu sur la capture</th><th>Carte trouvée</th><th></th></tr></thead><tbody>
+  if (!SHOT.length) { $(SHOT_T).innerHTML = '<p class="meta">Aucune carte reconnue sur cette image.</p>'; return; }
+  $(SHOT_T).innerHTML = `<div class="panel" style="margin-top:14px"><table class="rv"><thead><tr><th></th><th>Lu sur la capture</th><th>Carte trouvée</th><th></th></tr></thead><tbody>
     ${SHOT.map((r, i) => {
       const d = r.detected || {}, alts = r.alternatives || [], best = r.best;
       const opts = alts.map(a => `<option value="${esc(a.id)}" ${best && a.id === best.id ? "selected" : ""}>${esc(a.name)} · ${esc(a.number)}/${esc(a.set_total || "?")} · ${esc(a.set_name)}</option>`).join("");
@@ -646,22 +707,25 @@ function renderShot() {
           ${alts.length ? `<select data-sa="${i}" style="max-width:360px">${opts}</select>` : '<span class="why">introuvable dans le catalogue</span>'}</td>
         <td>${dup ? '<span class="b">déjà dans la wishlist</span>' : best ? '<span class="b ok">sûr</span>' : cur ? '<span class="b warn">à vérifier</span>' : ""}</td></tr>`;
     }).join("")}</tbody></table></div>
-    <div class="tools" style="margin-top:10px"><label class="meta">Prix max € <input type="number" id="smax" style="width:90px" min="0"></label><button class="btn primary" id="sadd">Ajouter la sélection</button></div>`;
-  $$("#shotRes [data-sa]").forEach(sel => sel.onchange = () => {
+    <div class="tools" style="margin-top:10px"><label class="meta">Prix max € <input type="number" class="smax" style="width:90px" min="0"></label><button class="btn primary sadd">Ajouter la sélection</button></div>`;
+  $$(SHOT_T + " [data-sa]").forEach(sel => sel.onchange = () => {
     const r = SHOT[+sel.dataset.sa], a = r.alternatives.find(x => x.id === sel.value);
-    const im = $(`#shotRes [data-simg="${sel.dataset.sa}"]`); if (im && a) im.src = a.image;
-    $(`#shotRes [data-si="${sel.dataset.sa}"]`).checked = true;
+    const im = $(`${SHOT_T} [data-simg="${sel.dataset.sa}"]`); if (im && a) im.src = a.image;
+    $(`${SHOT_T} [data-si="${sel.dataset.sa}"]`).checked = true;
   });
-  $("#sadd").onclick = async () => {
-    const ids = $$("#shotRes [data-si]").filter(c => c.checked).map(c => { const sel = $(`#shotRes [data-sa="${c.dataset.si}"]`); return sel ? sel.value : null; }).filter(Boolean);
+  $(SHOT_T + " .sadd").onclick = async () => {
+    const ids = $$(SHOT_T + " [data-si]").filter(c => c.checked).map(c => { const sel = $(`${SHOT_T} [data-sa="${c.dataset.si}"]`); return sel ? sel.value : null; }).filter(Boolean);
     if (!ids.length) return toast("Rien de sélectionné");
-    try { await addIds(ids, $("#smax").value); renderShot(); } catch (e) { toast(e.message); }
+    try { await addIds(ids, $(SHOT_T + " .smax").value); renderShot(); } catch (e) { toast(e.message); }
   };
 }
 
 // ---------- shops: quick add + directory ----------
-async function quickAdd(url, name) {
-  const r = await api("/api/shops/quick-add", {url, name});
+async function quickAdd(url, name, address, city) {
+  if (!url) { // physical-only shop from the directory: add it for the map
+    shopRows.push({name, url: "", address: address || "", city: city || ""}); renderShopList(); $("#saveShops").click(); loadDirectory(); return;
+  }
+  const r = await api("/api/shops/quick-add", {url, name, address, city});
   shopRows = r.shops.map(s => ({...s})); shopRows._loaded = true; S.shops = r.shops; renderShopList(); loadDirectory();
   if (r.already) toast("Déjà suivie");
   else toast(r.shop.engine === "shopify" || r.shop.engine === "woocommerce" ? `Ajoutée · compatible (${r.shop.engine})` : `Ajoutée · pas encore compatible (${r.shop.engine})`);
@@ -679,17 +743,129 @@ async function loadDirectory() {
   const hint = {shopify: ["ok", "Shopify"], woocommerce: ["ok", "WooCommerce"], prestashop: ["warn", "PrestaShop"], other: ["warn", "Autre"]};
   $("#dir").innerHTML = (d.shops || []).map((x, i) => {
     const h = hint[x.engine_hint] || ["", x.engine_hint || "?"];
-    return `<div class="it"><div class="g"><b>${esc(x.name)}</b><span>${esc(x.city || "")} · <a href="${safeUrl(x.url)}" target="_blank" rel="noopener">${esc(x.url.replace(/^https?:\/\//, ""))}</a></span><br><span>${esc(x.note || "")}</span></div>
+    return `<div class="it"><div class="g"><b>${esc(x.name)}</b><span>${esc(x.city || "")}${x.url ? ` · <a href="${safeUrl(x.url)}" target="_blank" rel="noopener">${esc(x.url.replace(/^https?:\/\//, ""))}</a>` : " · magasin physique"}</span><br><span>${esc(x.note || "")}</span></div>
       <span class="b ${h[0]}">${h[1]}</span>
       ${x.followed ? '<span class="b ok">Suivie</span>' : `<button class="btn small" data-dir="${i}">Ajouter</button>`}</div>`;
   }).join("");
   $$("#dir [data-dir]").forEach(b => b.onclick = async () => {
     const x = d.shops[+b.dataset.dir]; b.disabled = true; b.textContent = "…";
-    try { await quickAdd(x.url, x.name); } catch (e) { toast(e.message); b.disabled = false; b.textContent = "Ajouter"; }
+    try { await quickAdd(x.url, x.name, x.address, x.city); } catch (e) { toast(e.message); b.disabled = false; b.textContent = "Ajouter"; }
   });
 }
 
-load().then(() => { if (location.hash) show(location.hash.slice(1)); if (location.hash === "#wishlist") loadSets(); if (S.job.running) poll(); });
+// ---------- profiles ----------
+const LANGS_P = ["fr", "en", "ja", "pt"];
+function renderProfile() {
+  const p = S.profile || {}, list = S.profiles || [];
+  $("#profSel").innerHTML = list.map(x => `<option value="${esc(x.id)}" ${x.id === p.id ? "selected" : ""}>${esc(x.name)}</option>`).join("") + '<option value="__new">+ Nouveau profil…</option>';
+  $("#p-name").value = p.name || ""; $("#p-city").value = p.city || ""; $("#p-domain").value = p.vinted_domain || "pt";
+  $("#p-langs").innerHTML = LANGS_P.map(l => `<label><input type="checkbox" value="${l}" ${(p.languages || []).includes(l) ? "checked" : ""}> ${l}</label>`).join("");
+}
+async function switchProfile(id) {
+  await api("/api/profiles/switch", {id});
+  wl._loaded = false; shopRows._loaded = false; seenNotif = null; mapLoaded = false;
+  await load(); toast("Profil : " + S.profile.name);
+}
+async function newProfile() {
+  const name = prompt("Nom du nouveau profil ?"); if (!name) { renderProfile(); return; }
+  await api("/api/profiles", {name});
+  wl._loaded = false; shopRows._loaded = false; seenNotif = null; mapLoaded = false;
+  await load(); show("settings"); toast("Profil créé : complète ta ville et ta wishlist");
+}
+$("#profSel").onchange = e => e.target.value === "__new" ? newProfile() : switchProfile(e.target.value);
+$("#newProfile").onclick = newProfile;
+$("#saveProfile").onclick = async () => {
+  const languages = $$("#p-langs input").filter(i => i.checked).map(i => i.value);
+  const r = await api("/api/profile", {name: $("#p-name").value.trim() || "Moi", city: $("#p-city").value.trim(), vinted_domain: $("#p-domain").value, languages});
+  toast(r.profile.city && r.profile.lat == null ? "Profil enregistré (ville introuvable sur la carte)" : "Profil enregistré");
+  mapLoaded = false; await load();
+};
+
+// ---------- paste a list ----------
+$("#parseList").onclick = async () => {
+  const text = $("#pasteList").value.trim(); if (!text) return toast("Colle d'abord ta liste");
+  $("#parseList").disabled = true; $("#parseInfo").textContent = "Recherche des cartes dans le catalogue…";
+  try {
+    const r = await api("/api/wishlist/parse-text", {text});
+    SHOT = r.results; SHOT_T = "#textRes"; renderShot();
+    const ok = r.results.filter(x => x.best).length;
+    $("#parseInfo").textContent = `${r.results.length} ligne(s) · ${ok} sûre(s) · ${r.results.length - ok} à vérifier ou introuvable(s)`;
+  } catch (e) { $("#parseInfo").textContent = e.message; }
+  $("#parseList").disabled = false;
+};
+
+// ---------- map ----------
+let MAP = null, mapLayer = null, mapLoaded = false;
+async function loadMap() {
+  if (!window.L) { setTimeout(loadMap, 300); return; }
+  if (!MAP) {
+    MAP = L.map("map").setView([39.5, -8.2], 7);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19, attribution: "© OpenStreetMap"}).addTo(MAP);
+  }
+  setTimeout(() => MAP.invalidateSize(), 50);
+  if (mapLoaded) return;
+  $("#mapInfo").textContent = "Localisation des boutiques… (la première fois peut prendre ~1 s par boutique)";
+  const r = await api("/api/map");
+  if (mapLayer) mapLayer.remove();
+  mapLayer = L.layerGroup().addTo(MAP);
+  const pts = [];
+  r.pins.forEach(p => {
+    if (p.lat == null) return;
+    const col = p.kind === "followed" ? "#d6402f" : "#8a8378";
+    const m = L.circleMarker([p.lat, p.lng], {radius: p.kind === "followed" ? 9 : 7, color: "#fff", weight: 2, fillColor: col, fillOpacity: .95}).addTo(mapLayer);
+    m.bindPopup(`<b>${esc(p.name)}</b>${p.approx ? " <i>(approx.)</i>" : ""}<br>${esc(p.query)}${p.note ? "<br><small>" + esc(p.note) + "</small>" : ""}${p.url ? `<br><a href="${safeUrl(p.url)}" target="_blank" rel="noopener">Site</a>` : ""}<br><small>${p.kind === "followed" ? "Suivie" : "Dans l'annuaire"}</small>`);
+    pts.push([p.lat, p.lng]);
+  });
+  if (r.home) { L.circleMarker([r.home.lat, r.home.lng], {radius: 8, color: "#fff", weight: 2, fillColor: "#2a5db0", fillOpacity: 1}).addTo(mapLayer).bindPopup("Toi · " + esc(r.home.label)); pts.push([r.home.lat, r.home.lng]); }
+  if (pts.length) MAP.fitBounds(pts, {padding: [30, 30], maxZoom: 12});
+  const missing = r.pins.filter(p => p.lat == null).length;
+  $("#mapInfo").textContent = `${r.pins.length - missing} boutique(s) placée(s)` + (missing ? ` · ${missing} sans adresse ni ville` : "") + (r.home ? "" : " · ajoute ta ville dans Réglages → Profil");
+  mapLoaded = true;
+}
+$("#mapReload").onclick = () => { mapLoaded = false; loadMap(); };
+
+// ---------- releases ----------
+let RELS = null;
+async function loadReleases() {
+  if (!RELS) RELS = await api("/api/releases");
+  const reg = $("#relRegion").value, past = $("#relPast").checked, today = new Date().toISOString().slice(0, 10);
+  const list = RELS.releases.filter(r => (!reg || r.region === reg || r.region === "WW") && (past || (r.date_end || r.date) >= today.slice(0, r.date.length)))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  $("#relInfo").textContent = `Liste mise à jour le ${RELS.updated} à partir de sources web (liens sur chaque ligne). Les dates bougent souvent : « incertain » et « annoncé » sont à reconfirmer.`;
+  let cur = "", html = "";
+  const st = {"officiel": "ok", "annoncé": "info", "incertain": "warn", "rumeur": "bad"};
+  list.forEach(r => {
+    const d = new Date(r.date + (r.date.length === 7 ? "-01" : "") + "T12:00:00");
+    const month = d.toLocaleDateString("fr-FR", {month: "long", year: "numeric"});
+    if (month !== cur) { html += `<div class="month">${month}</div>`; cur = month; }
+    const isPast = (r.date_end || r.date) < today.slice(0, r.date.length);
+    html += `<div class="rel ${isPast ? "past" : ""}"><div class="d"><b>${r.date.length === 10 ? d.getDate() : "?"}</b><span>${d.toLocaleDateString("fr-FR", {month: "short"})}</span></div>
+      <div class="g"><b>${esc(r.title)}</b><span>${esc(r.products || "")}${r.date_end ? " · jusqu'au " + new Date(r.date_end + "T12:00:00").toLocaleDateString("fr-FR", {day: "numeric", month: "long"}) : ""}</span></div>
+      <span class="b">${esc(r.region)}</span><span class="b">${esc(r.kind)}</span><span class="b ${st[r.status] || ""}">${esc(r.status)}</span>
+      ${r.source ? `<a class="btn small" href="${safeUrl(r.source)}" target="_blank" rel="noopener">Source</a>` : ""}</div>`;
+  });
+  $("#rels").innerHTML = html || '<div class="empty">Rien à venir pour ce filtre.</div>';
+}
+$("#relRegion").onchange = loadReleases; $("#relPast").onchange = loadReleases;
+
+// ---------- diagnostic ----------
+async function loadDiag() {
+  const d = await api("/api/diagnostic");
+  if (!d.checks) return;
+  $("#diagAt").textContent = "Dernier diagnostic " + ago(d.at);
+  $("#diag").textContent = `TCG Hub · Python ${d.python} · ${d.os}\n` + d.checks.map(c => `${c.ok ? "✅" : "❌"} ${c.name}\n   ${typeof c.detail === "string" ? c.detail : JSON.stringify(c.detail, null, 1).replace(/\n/g, "\n   ")}`).join("\n");
+}
+$("#runDiag").onclick = () => run("diag");
+$("#copyDiag").onclick = async () => { try { await navigator.clipboard.writeText($("#diag").textContent); toast("Rapport copié"); } catch (_) { toast("Sélectionne le texte et copie-le"); } };
+
+// lazy loaders on tab open
+$$("#nav button").forEach(b => b.addEventListener("click", () => {
+  if (b.dataset.v === "map") loadMap();
+  if (b.dataset.v === "releases") loadReleases();
+  if (b.dataset.v === "settings") loadDiag();
+}));
+
+load().then(() => { if (location.hash) show(location.hash.slice(1)); if (location.hash === "#wishlist") loadSets(); if (location.hash === "#map") loadMap(); if (location.hash === "#releases") loadReleases(); if (location.hash === "#settings") loadDiag(); if (S.job.running) poll(); });
 setInterval(loadNotifs, 60000);
 </script>
 </body>

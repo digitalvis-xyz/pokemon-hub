@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "vision_ocr.swift")
 BIN = os.path.join(STATE_DIR, "vision_ocr")
 
-NUM_RE = re.compile(r"(?<![\d/])(?:N[°o]\s*)?0*(\d{1,3})\s*/\s*0*(\d{1,3})(?![\d/])")
+NUM_RE = re.compile(r"(?<![\d/])(?:N[°o]\s*)?0*(\d{1,3}[a-zA-Z]?)\s*/\s*0*(\d{1,3})(?![\d/])")
 NOISE = re.compile(r"(€|eur\b|prix|price|total|valeur|qt[eé]|x\d+\b|%|\d{1,2}:\d{2})", re.I)
 
 
@@ -77,7 +77,7 @@ def parse(lines: list[dict]) -> list[dict]:
     for i, ln in enumerate(lines):
         for m in NUM_RE.finditer(ln["text"]):
             number, total = m.group(1), m.group(2)
-            if int(total) < 20 or int(number) > 400:  # "1/2", dates, etc.
+            if int(total) < 10 or int(re.sub(r"\D", "", number)) > 400:  # "1/2", dates, etc.
                 continue
             name = _clean_name(ln["text"][:m.start()]) or _clean_name(ln["text"][m.end():])
             if not _looks_like_name(name):

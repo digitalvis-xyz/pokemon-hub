@@ -26,7 +26,7 @@ python3 app.py
 Your browser opens at http://127.0.0.1:8765. Leave the Terminal window open while you use the app, and press Ctrl+C there to stop it.
 You can also double-click **`start.command`**. The first time, macOS may block it: right-click it, choose *Open*, then confirm.
 
-The app runs on **real data**. Your wishlist, shops and settings live in the `data/` folder: it is never sent to GitHub, so `git pull` never touches it. The `wishlist.json` and `shops.json` at the root are only examples. On first start, anything real you had in them is copied into `data/`; the untouched example cards and shops are left out.
+The app runs on **real data**. Your profiles (`data/profiles/<name>/`: wishlist, shops, results, notifications) and settings live in the `data/` folder: it is never sent to GitHub, so `git pull` never touches it. The `wishlist.json` and `shops.json` at the root are only examples. On first start, anything real you had in them is copied into `data/`; the untouched example cards and shops are left out.
 To see the app with test data, tick *Mode démo* in Réglages. *Effacer les données de démo* removes every trace of it, including demo notifications.
 
 | Tab | What it does |
@@ -34,7 +34,9 @@ To see the app with test data, tick *Mode démo* in Réglages. *Effacer les donn
 | Bons plans | Vinted listings matched to your wishlist, with photo, price vs. your max, language, and why a listing was rejected |
 | Boutiques | Pre-orders, restocks and price drops, the full Pokémon inventory of each shop. Add a shop by pasting its address, or with one click from the **Portugal directory** (`shop_directory.json`, pre-filled from a web search). *Tout détecter* checks which shops are supported. |
 | Wishlist | Add cards from the open-source TCGdex catalogue (search by name, filter by set, "secret rares only"), or **import a screenshot** (Pokécardex list, binder, other app): Claude reads the cards and matches them to the catalogue for you to confirm. Then edit languages and max price. |
-| Réglages | Demo mode, Vinted country, Claude API key, Telegram alerts |
+| Carte | Map of your shops and the Portugal directory (OpenStreetMap, free). Shops are placed from their address, or their city when there's none. |
+| Sorties | Upcoming releases (FR / EN / JP) with status and source, from `releases.json`, which is updated with the app. You can export them as `.ics` or subscribe from Calendar: `http://127.0.0.1:8765/calendar.ics`. |
+| Réglages | **Profile** (name, city, Vinted country, card languages; one wishlist and shop list per profile; switch profile at the top), **Diagnostic** (tests the catalogue, Vinted and every shop, with a report to copy), demo mode, Claude API key, Telegram alerts |
 
 The **bell** (top right) is the notification centre: new Vinted matches, pre-orders, restocks and price drops, each with a link. Turn on *Notifications du Mac* in Réglages to also get system notifications while the page is open.
 
@@ -122,3 +124,11 @@ Both scripts send an alert only for new matches, new pre-orders, restocks and pr
 ## Limits
 
 Vinted has no public API, so this uses the same catalog endpoint as the website. Keep it to personal use and low frequency (it goes against Vinted's terms). The shop endpoints are public features of Shopify and WooCommerce.
+
+## Vinted (since September 2026)
+
+Vinted retired its old search address (`/api/v2/catalog/items`). The app now:
+1. opens an anonymous session on `www.vinted.<country>` (the `access_token_web` cookie, `X-Anon-Id` and the CSRF token),
+2. searches `api.vinted.<country>/svc-catalogue/items`, dropping any filter the server rejects with a 400 error,
+3. if the API still refuses, falls back to reading the website's results page.
+*Réglages → Diagnostic* shows every step with its HTTP code.

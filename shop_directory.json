@@ -1,15 +1,93 @@
 {
-  "_comment": "Online Pokémon TCG shops in Portugal, found by web search on 2026-11-23. engine_hint is a guess from public URLs; the app's Détecter button confirms it. Add or correct entries freely.",
-  "country": "PT",
-  "shops": [
-    {"name": "Versus Gamecenter", "url": "https://versusgamecenter.pt", "city": "Online", "engine_hint": "shopify", "note": "Pré-encomendas Pokémon (ETB, displays)"},
-    {"name": "Templars Arena", "url": "https://templarsarena.com", "city": "Lisboa · Santarém", "engine_hint": "shopify", "note": "Loja TCG com lojas físicas"},
-    {"name": "Heimdall Geek Store", "url": "https://heimdallgeekstore.pt", "city": "Online", "engine_hint": "shopify", "note": "ETB, selados"},
-    {"name": "Ajogar", "url": "https://www.ajogar.com", "city": "Online", "engine_hint": "shopify", "note": "Jogos de tabuleiro e TCG"},
-    {"name": "Infinity Collectables", "url": "https://infinitycollectables.com", "city": "Online", "engine_hint": "shopify", "note": "Colecionáveis, ETB (verificar se envia de PT)"},
-    {"name": "Mercadia Games", "url": "https://mercadiagames.pt", "city": "Online", "engine_hint": "woocommerce", "note": "Selados Pokémon"},
-    {"name": "Diver", "url": "https://www.diver.pt", "city": "Coimbra · online", "engine_hint": "prestashop", "note": "Pré-encomendas; PrestaShop: precisa de outro módulo"},
-    {"name": "Continente", "url": "https://www.continente.pt", "city": "Nacional", "engine_hint": "other", "note": "Grande superfície; precisa de outro módulo"},
-    {"name": "Worten", "url": "https://www.worten.pt", "city": "Nacional", "engine_hint": "other", "note": "Grande superfície; precisa de outro módulo"}
-  ]
+ "_comment": "Pokémon TCG shops in Portugal, found by web search (2026-11-23/24). engine_hint is a guess; the app's Détecter confirms it. address/city are used for the map. Entries without url are physical shops only (map).",
+ "country": "PT",
+ "shops": [
+  {
+   "name": "Versus Gamecenter",
+   "url": "https://versusgamecenter.pt",
+   "city": "Lisboa · Algés",
+   "engine_hint": "shopify",
+   "note": "Pré-encomendas Pokémon (ETB, displays)",
+   "address": "Rua Conselheiro Lopo Vaz, 1800-142 Lisboa, Portugal"
+  },
+  {
+   "name": "Templars Arena",
+   "url": "https://templarsarena.com",
+   "city": "Rio de Mouro · Santarém",
+   "engine_hint": "shopify",
+   "note": "Loja TCG com lojas físicas",
+   "address": "Urbanização Universidade Católica Portuguesa 30, 2635-001 Rio de Mouro, Portugal"
+  },
+  {
+   "name": "Heimdall Geek Store",
+   "url": "https://heimdallgeekstore.pt",
+   "city": "Online",
+   "engine_hint": "shopify",
+   "note": "ETB, selados"
+  },
+  {
+   "name": "Ajogar",
+   "url": "https://www.ajogar.com",
+   "city": "Online",
+   "engine_hint": "shopify",
+   "note": "Jogos de tabuleiro e TCG"
+  },
+  {
+   "name": "Infinity Collectables",
+   "url": "https://infinitycollectables.com",
+   "city": "Online",
+   "engine_hint": "shopify",
+   "note": "Colecionáveis, ETB (verificar se envia de PT)"
+  },
+  {
+   "name": "Mercadia Games",
+   "url": "https://mercadiagames.pt",
+   "city": "Lisboa",
+   "engine_hint": "woocommerce",
+   "note": "Selados Pokémon"
+  },
+  {
+   "name": "Diver",
+   "url": "https://www.diver.pt",
+   "city": "Coimbra",
+   "engine_hint": "prestashop",
+   "note": "Pré-encomendas; PrestaShop: precisa de outro módulo"
+  },
+  {
+   "name": "Continente",
+   "url": "https://www.continente.pt",
+   "city": "Nacional",
+   "engine_hint": "other",
+   "note": "Grande superfície; precisa de outro módulo"
+  },
+  {
+   "name": "Worten",
+   "url": "https://www.worten.pt",
+   "city": "Nacional",
+   "engine_hint": "other",
+   "note": "Grande superfície; precisa de outro módulo"
+  },
+  {
+   "name": "Hobbylândia",
+   "url": "",
+   "city": "Lisboa",
+   "address": "Avenida de Roma 48B, 1700-348 Lisboa, Portugal",
+   "engine_hint": "other",
+   "note": "Loja geek com torneios; site de venda online a confirmar"
+  },
+  {
+   "name": "Kemushi (ex-Arena Lisboa)",
+   "url": "",
+   "city": "Lisboa",
+   "engine_hint": "other",
+   "note": "Campo Grande / Alvalade; morada e site a confirmar"
+  },
+  {
+   "name": "Arena Porto",
+   "url": "",
+   "city": "Vila Nova de Gaia",
+   "engine_hint": "other",
+   "note": "Loja TCG; site a confirmar"
+  }
+ ]
 }

@@ -1,0 +1,31 @@
+{
+  "_comment": "Upcoming Pokémon TCG releases. Compiled from web sources on 2026-11-24; dates move, check the source link. Updated with the app (git pull). status: officiel | annoncé | incertain | rumeur.",
+  "updated": "2026-11-24",
+  "sources_hint": "Pokécardex forum (calendrier FR 2027): https://www.pokecardex.com/forums/viewtopic.php?t=50526",
+  "releases": [
+    {"date": "2026-11-06", "title": "Méga-Évolution – Règne Delta (ME06)", "region": "FR", "kind": "extension", "status": "officiel",
+     "products": "Display 36 boosters, Coffret Dresseur d'Élite", "source": "https://jollycards.fr/pages/calendrier-des-sorties-pokemon"},
+    {"date": "2026-11-27", "title": "Aura Seeker", "region": "JP", "kind": "extension", "status": "annoncé",
+     "products": "", "source": "https://jeetcardstcg.com/calendrier-des-sorties-pokemon/"},
+    {"date": "2026-12-04", "title": "Dernière vague 30ᵉ Anniversaire (classeur, Pokébox Nymphali-ex / Amphinobi-ex)", "region": "FR", "kind": "produits", "status": "incertain",
+     "products": "Contenu non confirmé pour la France", "source": "https://neopokemon.fr/actualites/calendrier-sorties-jcc-pokemon/"},
+    {"date": "2027-01-23", "date_end": "2027-01-31", "title": "Avant-premières Méga-Évolution – Poings Fluides", "region": "FR", "kind": "avant-première", "status": "officiel",
+     "products": "Dans les magasins indépendants participants", "source": "https://www.pokebip.com/news/7645/jcc-pokemon-nouvelle-extension-mega-evolution-poings-fluides"},
+    {"date": "2027-01-29", "title": "Coffret Pokémon Day 2027 + Mini Tins Eaux Merveilleuses", "region": "FR", "kind": "produits", "status": "annoncé",
+     "products": "Coffret avec boosters Règne Delta", "source": "https://hikarudistribution.com/pages/calendrier-des-sorties"},
+    {"date": "2027-01-31", "title": "Collection Tournoi Premium – Méga-Rayquaza-ex", "region": "FR", "kind": "produits", "status": "annoncé",
+     "products": "", "source": "https://www.pokekalos.fr/tcgevents"},
+    {"date": "2027-02-04", "title": "Poings Fluides sur JCC Pokémon Live", "region": "WW", "kind": "numérique", "status": "officiel",
+     "products": "", "source": "https://blog.cardzia.fr/calendrier-sorties-pokemon/"},
+    {"date": "2027-02-05", "title": "Mega Evolution – Flowing Fists (ME07)", "region": "EN", "kind": "extension", "status": "annoncé",
+     "products": "Méga-Lucario-Z-ex en vedette", "source": "https://jollycards.fr/pages/calendrier-des-sorties-pokemon"},
+    {"date": "2027-02-06", "title": "Méga-Évolution – Poings Fluides", "region": "FR", "kind": "extension", "status": "officiel",
+     "products": "Display, ETB, boosters", "source": "https://www.pokebip.com/news/7645/jcc-pokemon-nouvelle-extension-mega-evolution-poings-fluides"},
+    {"date": "2027-02-19", "title": "MEGA x MEGA Parade", "region": "JP", "kind": "extension", "status": "annoncé",
+     "products": "", "source": "https://jeetcardstcg.com/calendrier-des-sorties-pokemon/"},
+    {"date": "2027-02-27", "title": "Journée Pokémon (Pokémon Day)", "region": "WW", "kind": "événement", "status": "officiel",
+     "products": "", "source": "https://blog.cardzia.fr/calendrier-sorties-pokemon/"},
+    {"date": "2027-02", "title": "Booster spécial Saint-Valentin", "region": "FR", "kind": "produits", "status": "annoncé",
+     "products": "Date exacte non communiquée", "source": "https://jeetcardstcg.com/calendrier-des-sorties-pokemon/"}
+  ]
+}

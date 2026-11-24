@@ -20,7 +20,7 @@ import os
 import re
 import sys
 
-from common import ROOT, STATE_DIR, Http, data_path, ensure_data, load_json, norm, polite_sleep, save_json, stamp
+from common import ROOT, STATE_DIR, Http, ensure_profiles, load_json, norm, pfile, polite_sleep, pstate, save_json, stamp
 from notify import telegram
 from report import write_csv, write_html
 
@@ -90,15 +90,32 @@ def parse_woo(p: dict) -> dict:
     }
 
 
-def detect(http: Http, base: str) -> str:
-    for engine, path in (("shopify", "/products.json?limit=1"), ("woocommerce", "/wp-json/wc/store/v1/products?per_page=1")):
+SUPPORTED = ("shopify", "woocommerce")
+
+
+def detect_verbose(http: Http, base: str) -> tuple[str, list[dict]]:
+    """Try each known engine; return (engine, notes) where notes explain every probe."""
+    notes = []
+    for engine, path in (("shopify", "/products.json?limit=1"),
+                         ("woocommerce", "/wp-json/wc/store/v1/products?per_page=1")):
         try:
             status, body = http.get(base + path)
-            if status == 200 and body.lstrip()[:1] in ("{", "["):
-                return engine
-        except Exception:
-            pass
-    return "unsupported"
+        except Exception as e:
+            notes.append({"probe": engine, "status": "erreur", "detail": str(e)[:200]})
+            continue
+        is_json = body.lstrip()[:1] in ("{", "[")
+        notes.append({"probe": engine, "status": status,
+                      "detail": "JSON OK" if (status == 200 and is_json) else re.sub(r"\s+", " ", body[:160])})
+        if status == 200 and is_json:
+            return engine, notes
+    if all(n["status"] == "erreur" for n in notes):
+        return "error", notes  # network / certificate problem, not the shop's fault
+    blocked = any(n["status"] in (403, 429, 503) for n in notes)
+    return ("blocked" if blocked else "unsupported"), notes
+
+
+def detect(http: Http, base: str) -> str:
+    return detect_verbose(http, base)[0]
 
 
 # ---------- logic ----------
@@ -146,7 +163,7 @@ def watch(cfg: dict, fixtures: bool = False, run_no: int = 1, delay: float = 2.0
     """Fetch every shop, diff against saved state. Returns {"events", "inventory", "shops"}."""
     http = Http()
     keywords = cfg.get("keywords", ["pokemon"])
-    state_path = os.path.join(STATE_DIR, "shops_fixture_state.json" if fixtures else "shops_state.json")
+    state_path = os.path.join(STATE_DIR, "shops_fixture_state.json") if fixtures else pstate("shops_state.json")
     state = load_json(state_path, {})
     all_events, inventory, summary = [], [], []
 
@@ -159,14 +176,17 @@ def watch(cfg: dict, fixtures: bool = False, run_no: int = 1, delay: float = 2.0
                 raw = data["products"]
                 products = [parse_shopify(p, base) for p in raw] if engine == "shopify" else [parse_woo(p) for p in raw]
             else:
-                engine = shop.get("engine") or detect(http, base)
+                engine = shop.get("engine") if shop.get("engine") in SUPPORTED else detect(http, base)
                 if engine == "shopify":
                     products = fetch_shopify(http, base)
                 elif engine == "woocommerce":
                     products = fetch_woo(http, base)
                 else:
-                    log("  %-22s unsupported engine (needs an RSS or HTML scraper later)" % name)
-                    summary.append({"name": name, "engine": engine, "status": "unsupported", "count": 0})
+                    why = {"blocked": "bloqué par la protection anti-robots du site",
+                           "error": "site injoignable (réseau ou certificat), voir le Diagnostic"}.get(
+                        engine, "moteur non pris en charge (ni Shopify ni WooCommerce)")
+                    log("  %-22s %s" % (name, why))
+                    summary.append({"name": name, "engine": engine, "status": why, "count": 0})
                     continue
                 polite_sleep(delay)
         except Exception as e:
@@ -199,8 +219,8 @@ def run(args) -> int:
     if args.detect:
         print(args.detect, "->", detect(Http(), args.detect.rstrip("/")))
         return 0
-    ensure_data()
-    cfg = load_json(os.path.join(ROOT, "fixtures/shops_fixture.json") if args.fixtures else (args.shops or data_path("shops.json")), {})
+    ensure_profiles()
+    cfg = load_json(os.path.join(ROOT, "fixtures/shops_fixture.json") if args.fixtures else (args.shops or pfile("shops.json")), {})
     res = watch(cfg, fixtures=args.fixtures, run_no=args.run, delay=args.delay)
     events, inventory = res["events"], res["inventory"]
     tag = "shops_" + stamp() + ("_fixture%d" % args.run if args.fixtures else "")
@@ -223,7 +243,7 @@ def run(args) -> int:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--shops", default="", help="default: data/shops.json")
+    ap.add_argument("--shops", default="", help="default: shops of the active profile")
     ap.add_argument("--detect", metavar="URL", help="only detect the shop engine")
     ap.add_argument("--delay", type=float, default=2.0)
     ap.add_argument("--fixtures", action="store_true")

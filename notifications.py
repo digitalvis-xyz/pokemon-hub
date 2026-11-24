@@ -5,15 +5,18 @@ import os
 import threading
 import time
 
-from common import STATE_DIR, load_json, save_json
+from common import load_json, pstate, save_json
 
-PATH = os.path.join(STATE_DIR, "notifications.json")
+
+
+def _path(pid: str | None = None) -> str:
+    return pstate("notifications.json", pid)
 MAX_ITEMS = 300
 _lock = threading.Lock()
 
 
-def _load() -> list[dict]:
-    return load_json(PATH, [])
+def _load(pid: str | None = None) -> list[dict]:
+    return load_json(_path(pid), [])
 
 
 def add(items: list[dict]) -> int:
@@ -29,7 +32,7 @@ def add(items: list[dict]) -> int:
             known.add(it["key"])
             data.insert(0, dict(it, id="%d-%d" % (int(now * 1000), added), at=now, read=False))
             added += 1
-        save_json(PATH, data[:MAX_ITEMS])
+        save_json(_path(), data[:MAX_ITEMS])
         return added
 
 
@@ -44,17 +47,17 @@ def mark_read(ids: list[str] | None = None) -> None:
         for n in data:
             if ids is None or n["id"] in ids:
                 n["read"] = True
-        save_json(PATH, data)
+        save_json(_path(), data)
 
 
-def purge_demo() -> None:
+def purge_demo(pid: str | None = None) -> None:
     with _lock:
-        save_json(PATH, [n for n in _load() if not n.get("demo")])
+        save_json(_path(pid), [n for n in _load(pid) if not n.get("demo")])
 
 
 def clear() -> None:
     with _lock:
-        save_json(PATH, [])
+        save_json(_path(), [])
 
 
 def from_vinted(rows: list[dict], demo: bool) -> list[dict]:

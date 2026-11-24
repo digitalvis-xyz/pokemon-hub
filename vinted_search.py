@@ -15,10 +15,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 
 from classify import claude_check, rule_check
-from common import ROOT, STATE_DIR, Http, data_path, ensure_data, load_json, polite_sleep, save_json, stamp
+from common import ROOT, STATE_DIR, Http, ensure_profiles, load_json, pfile, polite_sleep, pstate, save_json, stamp
 from notify import telegram
 from report import write_csv, write_html
 
@@ -42,38 +43,111 @@ def build_queries(card: dict) -> list[str]:
 
 
 class Vinted:
-    def __init__(self, domain: str = "fr"):
-        self.base = "https://www.vinted.%s" % domain
-        self.http = Http()
-        self._ready = False
+    """Vinted catalogue search, as of the September 2026 change.
 
-    def _session(self) -> None:
-        # Visiting the home page sets the anonymous session cookies the API expects.
-        status, _ = self.http.get(self.base + "/")
+    1. api   : https://api.vinted.<tld>/svc-catalogue/items, with the anonymous session the
+               www site hands out (access_token_web cookie as bearer token, X-Anon-Id, CSRF).
+    2. html  : fallback, reads the server-rendered https://www.vinted.<tld>/catalog page.
+    Every attempt is recorded in self.attempts so the Diagnostic tab can show what happened.
+    """
+
+    def __init__(self, domain: str = "fr"):
+        self.domain = domain
+        self.www = "https://www.vinted.%s" % domain
+        self.api = "https://api.vinted.%s/svc-catalogue/items" % domain
+        self.http = Http()
+        self.ready = False
+        self.token = self.anon = self.csrf = None
+        self.attempts: list[dict] = []
+        self.mode = None  # "api" or "html" once one works
+
+    def _note(self, step: str, status, detail: str = "") -> None:
+        self.attempts.append({"step": step, "status": status, "detail": detail[:300]})
+
+    def _bootstrap(self) -> None:
+        status, body = self.http.get(self.www + "/")
+        hdrs = {k.lower(): v for k, v in (self.http.last_headers or {}).items()}
+        self.token = self.http.cookie("access_token_web")
+        self.anon = hdrs.get("x-anon-id") or self.http.cookie("anon_id")
+        m = (re.search(r'name="csrf-token"\s+content="([^"]+)"', body)
+             or re.search(r'CSRF_TOKEN\\?"\s*:\s*\\?"([0-9a-fA-F-]{20,})', body))
+        self.csrf = m.group(1) if m else None
+        self._note("session www.vinted.%s" % self.domain, status,
+                   "token=%s anon_id=%s csrf=%s" % (bool(self.token), bool(self.anon), bool(self.csrf)))
         if status >= 400:
-            raise RuntimeError("Vinted home page returned HTTP %s (blocked? try later or another network)" % status)
-        self._ready = True
+            raise RuntimeError("Vinted a refusé l'ouverture de session (HTTP %s)" % status)
+        self.ready = True
+
+    def _api_headers(self) -> dict:
+        h = {"Accept": "application/json, text/plain, */*", "Origin": self.www, "Referer": self.www + "/catalog"}
+        if self.token:
+            h["Authorization"] = "Bearer " + self.token
+        if self.anon:
+            h["X-Anon-Id"] = self.anon
+        if self.csrf:
+            h["X-Csrf-Token"] = self.csrf
+        return h
+
+    def _api_search(self, text: str, price_to: float | None, per_page: int) -> list[dict]:
+        base = {"search_text": text, "page": 1, "per_page": per_page}
+        ladders = [dict(base, order="newest_first", currency="EUR", **({"price_to": int(price_to)} if price_to else {})),
+                   dict(base, order="newest_first"),
+                   base]
+        last = None
+        for i, params in enumerate(ladders):
+            params = {k: v for k, v in params.items() if v not in (None, "")}  # blank values => 400
+            status, body = self.http.get(self.api, params, self._api_headers())
+            if status in (401, 403) and i == 0:
+                self._note("api", status, "session expirée, nouvelle session")
+                self._bootstrap()
+                status, body = self.http.get(self.api, params, self._api_headers())
+            self._note("api %s" % ",".join(sorted(params)), status, body[:200] if status != 200 else "")
+            if status == 200:
+                data = json.loads(body)
+                items = (data.get("items") or data.get("catalog_items")
+                         or (data.get("data") or {}).get("items") or [])
+                return [normalise_item(it, self.www) for it in items]
+            last = (status, body)
+            if status != 400:
+                break
+        raise RuntimeError("API Vinted HTTP %s: %s" % (last[0], last[1][:150]))
+
+    def _html_search(self, text: str, price_to: float | None) -> list[dict]:
+        params = {"search_text": text, "order": "newest_first"}
+        if price_to:
+            params["price_to"] = int(price_to)
+        status, body = self.http.get(self.www + "/catalog", params, {"Accept": "text/html"})
+        items = parse_catalog_html(body, self.www) if status == 200 else []
+        self._note("page catalogue", status, "%d annonces lues" % len(items) if status == 200 else body[:200])
+        if status != 200:
+            raise RuntimeError("Page catalogue Vinted HTTP %s" % status)
+        return items
 
     def search(self, text: str, price_to: float | None = None, per_page: int = 48) -> list[dict]:
-        if not self._ready:
-            self._session()
-        params = {"search_text": text, "order": "newest_first", "per_page": per_page, "page": 1}
-        if price_to:
-            params.update(price_to=int(price_to), currency="EUR")
-        url = self.base + "/api/v2/catalog/items"
-        status, body = self.http.get(url, params, {"Accept": "application/json", "Referer": self.base + "/catalog"})
-        if status == 401:  # session expired: refresh once
-            self._session()
-            status, body = self.http.get(url, params, {"Accept": "application/json"})
-        if status != 200:
-            raise RuntimeError("Vinted search HTTP %s: %s" % (status, body[:150]))
-        return [normalise_item(it, self.base) for it in json.loads(body).get("items", [])]
+        if not self.ready:
+            self._bootstrap()
+        if self.mode in (None, "api"):
+            try:
+                items = self._api_search(text, price_to, per_page)
+                self.mode = "api"
+                return items
+            except Exception as e:
+                if self.mode == "api":
+                    raise
+                self._note("api", "échec", str(e))
+        items = self._html_search(text, price_to)
+        self.mode = "html"
+        return items
 
 
 def _price(it: dict) -> float | None:
     p = it.get("price")
     if isinstance(p, dict):
         p = p.get("amount")
+    if p is None:
+        p = it.get("price_numeric")
+    if isinstance(p, str):
+        p = p.replace("€", "").replace(" ", "").replace(" ", "").replace(",", ".")
     try:
         return float(p)
     except (TypeError, ValueError):
@@ -81,18 +155,64 @@ def _price(it: dict) -> float | None:
 
 
 def normalise_item(it: dict, base: str) -> dict:
-    photo = it.get("photo") or {}
+    photo = it.get("photo") or ((it.get("photos") or [None])[0]) or {}
+    if isinstance(photo, str):
+        photo = {"url": photo}
+    box = it.get("item_box") or {}
+    status = it.get("status") or ""
+    if not status and box.get("second_line"):
+        status = box["second_line"].split("·")[-1].strip()
+    url = it.get("url") or it.get("path") or "/items/%s" % it.get("id")
+    if url.startswith("/"):
+        url = base + url
+    user = it.get("user") or {}
     return {
         "source": "vinted",
         "listing_id": str(it.get("id")),
         "title": it.get("title", ""),
         "description": it.get("description", ""),
         "price": _price(it),
-        "condition": it.get("status") or "",
-        "seller": (it.get("user") or {}).get("login", ""),
-        "url": it.get("url") or "%s/items/%s" % (base, it.get("id")),
+        "condition": status if isinstance(status, str) else "",
+        "seller": user.get("login", "") if isinstance(user, dict) else "",
+        "url": url,
         "photo_url": photo.get("url") or photo.get("full_size_url") or "",
     }
+
+
+_A_TAG = re.compile(r"<a\b[^>]*>", re.I)
+_ATTR = re.compile(r'([a-zA-Z_:-]+)="([^"]*)"')
+_IMG = re.compile(r'<img\b[^>]*src="(https://images\d*\.vinted\.net/[^"]+)"', re.I)
+
+
+def parse_catalog_html(page: str, base: str) -> list[dict]:
+    """Read listings from the server-rendered catalogue page (fallback when the API refuses us)."""
+    out, seen = [], set()
+    for m in _A_TAG.finditer(page):
+        attrs = dict(_ATTR.findall(m.group(0)))
+        href = attrs.get("href", "")
+        idm = re.search(r"/items/(\d+)", href)
+        title_attr = html_unescape(attrs.get("title", ""))
+        if not idm or not title_attr or idm.group(1) in seen:
+            continue
+        seen.add(idm.group(1))
+        # "Title, marque: X, état: Très bon état, taille: Y, 12,00 €, 13,20 € inclut ..."
+        title = re.split(r",\s*(?:[^,:]{2,25}):\s", title_attr, maxsplit=1)[0].strip()
+        pm = re.search(r"(\d[\d\s ]*[.,]\d{2})\s*€", title_attr)
+        cond = re.search(r"(?:état|estado|condition|zustand|stato|staat)\s*:\s*([^,]+)", title_attr, re.I)
+        img = _IMG.search(page, m.end(), m.end() + 4000)
+        out.append({
+            "source": "vinted", "listing_id": idm.group(1), "title": title, "description": title_attr,
+            "price": _price({"price": pm.group(1)}) if pm else None,
+            "condition": cond.group(1).strip() if cond else "", "seller": "",
+            "url": href if href.startswith("http") else base + href,
+            "photo_url": img.group(1) if img else "",
+        })
+    return out
+
+
+def html_unescape(s: str) -> str:
+    import html as _h
+    return _h.unescape(s)
 
 
 VERDICT_ORDER = {"match": 0, "review": 1, "rejected": 2}
@@ -101,7 +221,7 @@ VERDICT_ORDER = {"match": 0, "review": 1, "rejected": 2}
 def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai: bool | None = None,
            recheck: bool = False, delay: float = 3.0, log=print, send_alerts: bool = True) -> list[dict]:
     """Search Vinted for every card and classify. Returns rows sorted best first."""
-    seen_path = os.path.join(STATE_DIR, "vinted_seen.json")
+    seen_path = pstate("vinted_seen.json")
     seen = load_json(seen_path, {})
     if use_ai is None:
         use_ai = bool(os.environ.get("ANTHROPIC_API_KEY"))
@@ -153,6 +273,9 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
                     r["verdict"] = "match"
             rows.append(r)
 
+    if client is not None:
+        save_json(pstate("vinted_debug.json"), {"domain": domain, "mode": client.mode, "attempts": client.attempts[-60:]})
+        log("Méthode Vinted utilisée : %s" % (client.mode or "aucune"))
     rows.sort(key=lambda r: (VERDICT_ORDER[r["verdict"]], r.get("deal_ratio") or 9))
     fresh = [r for r in rows if r["verdict"] == "match" and r["new"]]
     if not fixtures:
@@ -171,8 +294,8 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
 
 
 def run(args) -> int:
-    ensure_data()
-    cards = load_json(args.wishlist or data_path("wishlist.json"), {"cards": []})["cards"]
+    ensure_profiles()
+    cards = load_json(args.wishlist or pfile("wishlist.json"), {"cards": []})["cards"]
     use_ai = False if args.no_ai else None
     rows = search(cards, args.domain, args.fixtures, use_ai, args.recheck, args.delay)
     name = "vinted_" + stamp()
@@ -188,7 +311,7 @@ def run(args) -> int:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--wishlist", default="", help="default: data/wishlist.json")
+    ap.add_argument("--wishlist", default="", help="default: wishlist of the active profile")
     ap.add_argument("--domain", default="fr", help="fr, pt, es, be, it, de ...")
     ap.add_argument("--delay", type=float, default=3.0, help="seconds between requests")
     ap.add_argument("--fixtures", action="store_true", help="offline test data")
