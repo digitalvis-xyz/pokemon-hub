@@ -259,7 +259,8 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
     <div class="tools" id="dealTools">
       <span class="chip on" data-f="match" title="Les meilleures offres par carte (cartes seules)">Meilleures offres<span class="n" id="n-match"></span></span>
       <span class="chip" data-f="review">À vérifier<span class="n" id="n-review"></span></span>
-      <span class="chip" data-f="lot" title="Ventes groupées qui contiennent la carte">Lots<span class="n" id="n-lot"></span></span>
+      <span class="chip" data-f="lot" title="Ventes groupées où le nom ET le numéro de la carte apparaissent (titre ou description)">Lots avec ta carte<span class="n" id="n-lot"></span></span>
+      <span class="chip" data-f="lot_weak" title="Ventes groupées où la carte n'est pas citée clairement">Lots incertains<span class="n" id="n-lot_weak"></span></span>
       <span class="chip" data-f="more" title="Autres annonces correctes, moins chères en premier">Autres offres<span class="n" id="n-more"></span></span>
       <span class="chip" data-f="rejected">Rejetées<span class="n" id="n-rejected"></span></span>
       <span class="chip" data-f="all">Tout</span>
@@ -269,6 +270,7 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
       </select>
       <label class="toggle"><input type="checkbox" id="newOnly"> Nouvelles seulement</label>
     </div>
+    <p class="meta" style="margin:-6px 0 14px">Une offre ne compte que si le <b>nom</b> de la carte et son <b>numéro unique</b> (ex. 199/165) apparaissent dans le titre ou la description. Les descriptions des meilleures offres et des annonces incertaines sont lues pour vérifier (et écarter les proxys).</p>
     <div id="deals"></div>
     <div class="foot" id="dealsFoot"></div>
   </section>
@@ -438,6 +440,8 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
       <span class="hint">Plus c'est lent, moins Vinted risque de bloquer. 3 s est raisonnable.</span>
       <label>Offres Vinted par carte</label><input type="number" id="s-topk" min="1" max="10" style="width:100px">
       <span class="hint">Nombre de meilleures offres gardées par carte (les autres vont dans « Autres offres »).</span>
+      <label>Descriptions lues par carte</label><input type="number" id="s-desc" min="0" max="20" style="width:100px">
+      <span class="hint">Annonces incertaines ouvertes pour lire leur description (numéro, contenu d'un lot), en plus des meilleures offres. 0 = désactivé. Plus c'est haut, plus la recherche est longue.</span>
       <label>Clé Google Places</label><input type="password" id="s-gkey" placeholder="optionnelle" autocomplete="off">
       <span class="hint">Optionnelle : améliore l'ajout de boutiques (adresse, site). Sans clé, OpenStreetMap est utilisé gratuitement.</span>
       <label>Vérification IA (Claude)</label>
@@ -506,7 +510,7 @@ $("#newOnly").onchange = e => { F.newOnly = e.target.checked; renderDeals(); };
 
 function renderDeals() {
   const rows = S.vinted.rows || [];
-  ["match", "review", "lot", "more", "rejected"].forEach(v => $("#n-" + v).textContent = rows.filter(r => r.verdict === v).length);
+  ["match", "review", "lot", "lot_weak", "more", "rejected"].forEach(v => $("#n-" + v).textContent = rows.filter(r => r.verdict === v).length);
   const sel = $("#cardFilter"), cur = F.card;
   const cards = [...new Set(rows.map(r => r.query_card))];
   sel.innerHTML = '<option value="">Toutes les cartes</option>' + cards.map(c => `<option ${c === cur ? "selected" : ""}>${esc(c)}</option>`).join("");
@@ -522,7 +526,7 @@ function renderDeals() {
     // one block per card, best offers first; blocks ordered by their best deal
     const byId = {}, wlById = Object.fromEntries((S.wishlist || []).map(c => [c.id, c]));
     list.forEach(r => (byId[r.card_id] = byId[r.card_id] || []).push(r));
-    const VO = {match: 0, review: 1, lot: 2, more: 3, rejected: 4};
+    const VO = {match: 0, review: 1, lot: 2, lot_weak: 3, more: 4, rejected: 5};
     const groups = Object.entries(byId).map(([id, rs]) => [id, rs.sort((a, b) => (VO[a.verdict] - VO[b.verdict]) || (key(a) - key(b)))]).sort((a, b) => key(a[1][0]) - key(b[1][0]));
     $("#deals").innerHTML = groups.map(([id, rs]) => {
       const c = wlById[id] || {}, img = c.image ? c.image.replace("/high.", "/low.") : "";
@@ -539,11 +543,12 @@ function renderDeals() {
 function dealCard(r) {
   const ratio = r.deal_ratio, pct = ratio ? Math.min(ratio, 1) * 100 : 0;
   const col = ratio == null ? "#ccc" : ratio <= .75 ? "var(--ok)" : ratio <= .9 ? "#7aa63a" : ratio <= 1 ? "var(--warn)" : "var(--bad)";
-  const vb = {match: ["ok", r.rank ? "N°" + r.rank : "Top"], review: ["warn", "À vérifier"], lot: ["info", "Lot"], more: ["", "Autre offre"], rejected: ["bad", "Rejetée"]}[r.verdict] || ["", r.verdict];
+  const vb = {match: ["ok", r.rank ? "N°" + r.rank : "Top"], review: ["warn", "À vérifier"], lot: ["info", "Lot ✓"], lot_weak: ["", "Lot ?"], more: ["", "Autre offre"], rejected: ["bad", "Rejetée"]}[r.verdict] || ["", r.verdict];
   const badges = [`<span class="b ${vb[0]}">${vb[1]}</span>`];
   if (r.new) badges.push('<span class="b new">Nouveau</span>');
   if (r.guess_lang || r.ai_lang) badges.push(`<span class="b">${esc((r.ai_lang || r.guess_lang).toUpperCase())}</span>`);
   if (r.is_graded) badges.push('<span class="b info">Gradée</span>');
+  if (r.confirmed_in === "description") badges.push('<span class="b ok" title="Nom et numéro trouvés dans la description">✓ description</span>');
   const img = r.photo_url ? `style="background-image:url('${safeUrl(r.photo_url)}')"` : "";
   const why = r.verdict === "rejected" && (r.rule_reject || []).length ? `<div class="why">${esc(r.rule_reject.join(" · "))}</div>` : "";
   const ai = r.ai_reason ? `<div class="ai">IA ${r.ai_match ? "✓" : "✗"} ${r.ai_confidence != null ? Math.round(r.ai_confidence * 100) + "% · " : ""}${esc(r.ai_reason)}</div>` : "";
@@ -659,13 +664,13 @@ function renderSettings() {
   $("#s-demo").checked = !!s.demo_mode; $("#s-delay").value = s.vinted_delay;
   try { $("#s-bn").checked = localStorage.getItem("bn") === "1"; } catch (_) {}
   $("#s-ai").checked = !!s.use_ai; $("#s-shot").value = s.screenshot_engine || "auto";
-  $("#s-topk").value = s.vinted_top_k || 3; $("#s-gkey").value = s.google_places_key || ""; $("#s-key").value = s.anthropic_api_key; $("#s-tg").value = s.telegram_bot_token; $("#s-chat").value = s.telegram_chat_id;
+  $("#s-topk").value = s.vinted_top_k || 3; $("#s-desc").value = s.vinted_desc_checks ?? 6; $("#s-gkey").value = s.google_places_key || ""; $("#s-key").value = s.anthropic_api_key; $("#s-tg").value = s.telegram_bot_token; $("#s-chat").value = s.telegram_chat_id;
 }
 $("#saveSettings").onclick = async () => {
   try {
     await api("/api/settings", {demo_mode: $("#s-demo").checked, vinted_delay: +$("#s-delay").value || 3,
       use_ai: $("#s-ai").checked, screenshot_engine: $("#s-shot").value,
-      vinted_top_k: Math.max(1, Math.min(10, +$("#s-topk").value || 3)), google_places_key: $("#s-gkey").value.trim(), anthropic_api_key: $("#s-key").value.trim(), telegram_bot_token: $("#s-tg").value.trim(), telegram_chat_id: $("#s-chat").value.trim()});
+      vinted_top_k: Math.max(1, Math.min(10, +$("#s-topk").value || 3)), vinted_desc_checks: Math.max(0, Math.min(20, +$("#s-desc").value)), google_places_key: $("#s-gkey").value.trim(), anthropic_api_key: $("#s-key").value.trim(), telegram_bot_token: $("#s-tg").value.trim(), telegram_chat_id: $("#s-chat").value.trim()});
     const bn = $("#s-bn").checked;
     if (bn && "Notification" in window && Notification.permission !== "granted") await Notification.requestPermission();
     try { localStorage.setItem("bn", bn ? "1" : "0"); } catch (_) {}

@@ -128,6 +128,35 @@ class Vinted:
             raise RuntimeError("Page catalogue Vinted HTTP %s" % status)
         return items
 
+    def item_description(self, url: str) -> str | None:
+        """Description of one listing, read from its public page (JSON-LD, then meta tags)."""
+        try:
+            status, page = self.http.get(url, headers={"Accept": "text/html"})
+        except Exception as e:
+            self._note("annonce", "erreur", str(e))
+            return None
+        if status != 200:
+            self._note("annonce", status, url)
+            return None
+        for block in re.findall(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', page, re.S | re.I):
+            try:
+                data = json.loads(html_unescape(block.strip()))
+            except Exception:
+                continue
+            for obj in (data if isinstance(data, list) else [data]):
+                if isinstance(obj, dict) and obj.get("description"):
+                    return str(obj["description"])
+        m = (re.search(r'<meta[^>]+(?:name|property)="(?:og:)?description"[^>]+content="([^"]*)"', page)
+             or re.search(r'"description"\s*:\s*"((?:[^"\\]|\\.){10,4000})"', page))
+        if m:
+            txt = m.group(1)
+            try:
+                txt = json.loads('"%s"' % txt) if "\\" in txt else txt
+            except Exception:
+                pass
+            return html_unescape(txt)
+        return ""
+
     def search(self, text: str, price_to: float | None = None, per_page: int = 48) -> list[dict]:
         if not self.ready:
             self._bootstrap()
@@ -181,6 +210,7 @@ def normalise_item(it: dict, base: str) -> dict:
         "seller": user.get("login", "") if isinstance(user, dict) else "",
         "url": url,
         "photo_url": photo.get("url") or photo.get("full_size_url") or "",
+        "description_full": it.get("description_full", ""),  # only in offline fixtures
     }
 
 
@@ -220,12 +250,38 @@ def html_unescape(s: str) -> str:
     return _h.unescape(s)
 
 
-VERDICT_ORDER = {"match": 0, "review": 1, "lot": 2, "more": 3, "rejected": 4}
+VERDICT_ORDER = {"match": 0, "review": 1, "lot": 2, "lot_weak": 3, "more": 4, "rejected": 5}
+
+
+def decide(r: dict) -> str:
+    """Verdict from the rules. A match needs BOTH the card's name and its unique ID (199/165),
+    in the title or the description. Group sales are split the same way."""
+    reject = [x for x in r["rule_reject"] if x not in ("lot", "no_number")]
+    if any(x.startswith("blocked") for x in reject):
+        return "rejected"                       # proxy, fake, custom…
+    full = r.get("id_hit") and r.get("name_hit")
+    if r["is_lot"]:
+        return "lot" if full else "lot_weak"    # lot that provably contains the card / maybe
+    if full and not reject:
+        return "match"
+    if r.get("name_hit") and ("number" in r["rule_flags"] or "exact_number" in r["rule_flags"]) and not reject:
+        return "review"                         # name + a number that isn't clearly 199/165
+    return "rejected"
+
+
+def needs_description(r: dict) -> bool:
+    """Worth opening the listing: the name is there but the ID isn't (often written in the
+    description), or a lot that might contain the card."""
+    if r.get("desc_checked") or any(x.startswith("blocked") for x in r["rule_reject"]):
+        return False
+    if r["verdict"] == "lot_weak":
+        return True
+    return r.get("name_hit") and not r.get("id_hit") and set(r["rule_reject"]) <= {"no_number"}
 
 
 def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai: bool | None = None,
            recheck: bool = False, delay: float = 3.0, log=print, send_alerts: bool = True,
-           stop=None, top_k: int = 3) -> list[dict]:
+           stop=None, top_k: int = 3, desc_checks: int = 6) -> list[dict]:
     """Search Vinted for every card and classify. Returns rows sorted best first."""
     seen_path = pstate("vinted_seen.json")
     seen = load_json(seen_path, {})
@@ -262,23 +318,58 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
                 listings.setdefault(it["listing_id"], it)
             log("  %-40s %3d results" % (q[:40], len(items)))
 
+        card_rows = []
         for it in listings.values():
             r = rule_check(it, card)
             r["query_card"] = "%s %s/%s" % (card.get("name_fr") or card.get("name_en"), card["number"], card.get("set_total", ""))
             r["new"] = it["listing_id"] not in seen
             r["demo"] = fixtures
-            blocked = any(x.startswith("blocked") for x in r["rule_reject"])
-            if r["is_lot"] and not blocked:
-                r["verdict"] = "lot"          # group sale: always shown apart, never auto-rejected
-            elif not r["rule_reject"] and "exact_number" in r["rule_flags"] and r["rule_score"] >= 55:
-                r["verdict"] = "match"
-            elif not r["rule_reject"] and r["rule_score"] >= 25:
-                r["verdict"] = "review"
-            else:
-                r["verdict"] = "rejected"
+            r["verdict"] = decide(r)
+            card_rows.append(r)
 
+        # Open the most promising uncertain listings and read their description:
+        # sellers often put the number (199/165) there, and lots list their cards there.
+        def read_desc(x: dict) -> None:
+            """Open one listing, re-run the rules with its description, replace it in card_rows."""
+            if client is not None:
+                desc = client.item_description(x["url"])
+                polite_sleep(min(delay, 2.0))
+            else:
+                desc = listings[x["listing_id"]].get("description_full")  # offline fixtures
+            if not desc:
+                x["desc_checked"] = True
+                return
+            y = rule_check(dict(listings[x["listing_id"]], description=desc), card)
+            y.update({k: x[k] for k in ("query_card", "new", "demo")}, desc_checked=True)
+            y["verdict"] = decide(y)
+            card_rows[card_rows.index(x)] = y
+
+        # 1) uncertain listings: name without the ID (sellers often write 199/165 in the description), uncertain lots
+        todo = sorted((x for x in card_rows if needs_description(x)), key=lambda x: x.get("price") or 1e9)[:desc_checks]
+        for x in todo:
+            if stop and stop():
+                break
+            read_desc(x)
+        # 2) the offers you'll actually see: check the best ones aren't proxies/fakes in the description
+        reads = len(todo)
+        if desc_checks:
+            for _ in range(top_k * 2):
+                if stop and stop():
+                    break
+                tops = sorted((x for x in card_rows if x["verdict"] == "match"), key=lambda x: x.get("price") or 1e9)[:top_k]
+                unchecked = [x for x in tops if not x.get("desc_checked")]
+                if not unchecked:
+                    break
+                read_desc(unchecked[0])
+                reads += 1
+        if reads:
+            confirmed = sum(1 for x in card_rows if x.get("desc_checked") and x.get("confirmed_in") == "description")
+            dropped = sum(1 for x in card_rows if x.get("desc_checked") and x["verdict"] == "rejected")
+            log("    %d description(s) lue(s) · %d confirmée(s) par la description · %d écartée(s)" % (reads, confirmed, dropped))
+
+        for r in card_rows:
             if use_ai and r["verdict"] in ("match", "review") and (r["new"] or recheck):
-                ai = claude_check(it, card) or {}
+                ai = claude_check(listings[r["listing_id"]], card) or {}
                 r["ai_match"] = ai.get("match")
                 r["ai_confidence"] = ai.get("confidence")
                 r["ai_lang"] = ai.get("language")
@@ -287,14 +378,14 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
                     r["verdict"] = "rejected"
                 elif ai.get("match") and (ai.get("confidence") or 0) >= 0.7:
                     r["verdict"] = "match"
-            rows.append(r)
+        rows.extend(card_rows)
 
     # Keep it readable: per card, only the K cheapest matches stay "match", the next reviews/lots are capped too.
     by_card: dict[str, list[dict]] = {}
     for r in rows:
         by_card.setdefault(r["card_id"], []).append(r)
     for card_rows in by_card.values():
-        for verdict, keep in (("match", top_k), ("review", 3), ("lot", 3)):
+        for verdict, keep in (("match", top_k), ("review", 3), ("lot", 3), ("lot_weak", 3)):
             ranked = sorted((r for r in card_rows if r["verdict"] == verdict), key=lambda r: r.get("price") or 1e9)
             for i, r in enumerate(ranked):
                 r["rank"] = i + 1
@@ -312,8 +403,8 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
         save_json(seen_path, seen)
 
     stats = {v: sum(1 for r in rows if r["verdict"] == v) for v in VERDICT_ORDER}
-    log("%d annonces · %d meilleures offres (max %d par carte) · %d à vérifier · %d lots · %d autres · %d rejetées · %d nouvelles" % (
-        len(rows), stats["match"], top_k, stats["review"], stats["lot"], stats["more"], stats["rejected"], len(fresh)))
+    log("%d annonces · %d meilleures offres (max %d par carte) · %d à vérifier · %d lots confirmés · %d lots incertains · %d autres · %d rejetées · %d nouvelles" % (
+        len(rows), stats["match"], top_k, stats["review"], stats["lot"], stats["lot_weak"], stats["more"], stats["rejected"], len(fresh)))
     if fresh and send_alerts and not fixtures:
         msg = "\n\n".join("%s\n%.0f € (%s)\n%s" % (r["query_card"], r["price"] or 0, r["title"][:60], r["url"]) for r in fresh[:10])
         if telegram("Nouvelles annonces Vinted\n\n" + msg):

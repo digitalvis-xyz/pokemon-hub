@@ -55,6 +55,7 @@ DEFAULT_SETTINGS = {
     "use_ai": True,
     "screenshot_engine": "auto",
     "vinted_top_k": 3,          # best offers kept per card
+    "vinted_desc_checks": 6,    # listings per card whose description is read (0 = off)
     "google_places_key": "",    # optional: better shop autofill  # auto = Claude if an API key is set, else free macOS OCR
     "anthropic_api_key": "",
     "telegram_bot_token": "",
@@ -181,7 +182,8 @@ def job_vinted(say, params=None, stop=None) -> None:
     domain = get_profile().get("vinted_domain") or s["vinted_domain"]
     rows = vinted_search.search(cards, domain=domain, fixtures=demo, use_ai=bool(s["use_ai"]),
                                 delay=float(s["vinted_delay"]), log=say, stop=stop,
-                                top_k=int(s.get("vinted_top_k") or 3))
+                                top_k=int(s.get("vinted_top_k") or 3),
+                                desc_checks=int(s.get("vinted_desc_checks", 6)))
     if ids:  # partial search: keep previous results for the other cards
         prev = load_json(results_path("vinted", demo), {}).get("rows", [])
         rows = [r for r in prev if r.get("card_id") not in ids] + rows

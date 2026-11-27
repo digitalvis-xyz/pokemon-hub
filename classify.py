@@ -19,6 +19,7 @@ BLOCK_WORDS = [
     "orica", "metal card", "carte metal", "gold metal", "non officiel", "unofficial",
     "jumbo", "oversize", "sticker", "autocollant", "toploader vide", "sleeve", "pochette vide",
 ]
+DESC_BLOCK_WORDS = ["proxy", "fake", "replica", "replique", "reproduction", "orica", "non officiel", "unofficial", "fan art"]
 LOT_WORDS = [" lot ", "lot de", " lote ", "bundle", "collection complete", "x cartes", "cartes pokemon en vrac", "bulk",
              "classeur", "binder", "pack de", "set de", "plusieurs cartes", "various cards", "varias cartas", "vrac"]
 LOT_COUNT = re.compile(r"\b\d{2,4}\s*(?:cartes|cards|cartas|carte)\b")
@@ -72,7 +73,11 @@ def rule_check(listing: dict, card: dict) -> dict:
         score += 10
         flags.append("set_code")
 
-    blocked = [w for w in BLOCK_WORDS if w in text]
+    # Accessory words (sleeve, toploader…) only count in the title: descriptions of real cards
+    # often say "sleevée" or "envoyée en toploader". In the description only fakes are blocking.
+    title_txt = " " + norm(listing.get("title", "")) + " "
+    desc_txt = " " + norm(listing.get("description", "")) + " "
+    blocked = [w for w in BLOCK_WORDS if w in title_txt] + [w for w in DESC_BLOCK_WORDS if w in desc_txt and w not in title_txt]
     is_lot = looks_like_lot(text)
     is_graded = any(w in text for w in GRADED_WORDS)
     lang = next((lg for lg, hints in LANG_HINTS.items() if any(h in text for h in hints)), None)
@@ -92,8 +97,18 @@ def rule_check(listing: dict, card: dict) -> dict:
     if "exact_number" not in flags and "number" not in flags:
         reject.append("no_number")
 
+    # Where were the card's name and unique ID (199/165) found? Title and description separately.
+    def hits(t: str) -> tuple[bool, bool]:
+        t = " " + norm(t) + " "
+        return (bool(pats and pats[0].search(t)), any(nb and nb in t for nb in name_base))
+    id_t, name_t = hits(listing.get("title", ""))
+    id_d, name_d = hits(listing.get("description", "")) if listing.get("description") else (False, False)
+    id_hit, name_hit = id_t or id_d, name_t or name_d
+
     out = dict(listing)
     out.update(
+        id_hit=id_hit, name_hit=name_hit,
+        confirmed_in=("titre" if (id_t and name_t) else "description" if (id_hit and name_hit) else ""),
         card_id=card["id"],
         rule_score=score,
         rule_flags=flags,
