@@ -405,7 +405,7 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
     <div id="wall" class="wall"></div>
     <div id="wlTable" hidden>
     <div class="panel" style="overflow:auto"><table style="min-width:1100px">
-      <thead><tr><th></th><th title="Je l'ai">✓</th><th>Id</th><th>Nom FR</th><th>Nom EN</th><th>Extension</th><th style="width:84px">Code</th><th style="width:70px">N°</th><th style="width:70px">Total</th><th>Langues</th><th style="width:90px">Prix max €</th><th>Gradée</th><th>Lots</th><th></th></tr></thead>
+      <thead><tr><th></th><th title="Je l'ai">✓</th><th>Id</th><th>Nom FR</th><th>Nom EN</th><th>Extension</th><th style="width:84px">Code</th><th style="width:70px">N°</th><th style="width:70px">Total</th><th>Langues</th><th style="width:90px">Prix max €</th><th style="width:130px">État min</th><th>Gradée</th><th>Lots</th><th></th></tr></thead>
       <tbody id="wl"></tbody></table></div>
     <div class="tools" style="margin-top:10px"><button class="btn" id="addCard">+ Ajouter une carte</button><button class="btn primary" id="saveWl">Enregistrer</button></div>
     </div>
@@ -423,7 +423,10 @@ textarea{font:13px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)
       <select id="p-domain"><option value="pt">vinted.pt</option><option value="fr">vinted.fr</option><option value="es">vinted.es</option><option value="be">vinted.be</option><option value="it">vinted.it</option><option value="de">vinted.de</option><option value="nl">vinted.nl</option><option value="co.uk">vinted.co.uk</option></select>
       <label>Langues des cartes</label>
       <div class="langs" id="p-langs"></div>
-      <span class="hint">Cochées par défaut pour les cartes que tu ajoutes.</span>
+      <span class="hint">Les annonces Vinted dans une autre langue sont écartées (langue indiquée) ou mises « à vérifier » (langue probable, d'après le pays ou la langue du vendeur).</span>
+      <label>État minimum (Vinted)</label>
+      <select id="p-cond"><option value="">Peu importe</option><option value="4">Neuf (sans étiquette) +</option><option value="3">Très bon état +</option><option value="2">Bon état +</option></select>
+      <span class="hint">Par défaut pour toutes tes cartes ; modifiable carte par carte dans Wishlist → Tableau. Quand l'état n'est pas dans les résultats, l'app le lit sur la page de l'annonce (meilleures offres).</span>
       <span></span>
       <div class="tools" style="margin:0"><button class="btn primary" id="saveProfile">Enregistrer le profil</button><button class="btn" id="newProfile">+ Nouveau profil</button></div>
     </div>
@@ -540,17 +543,21 @@ function renderDeals() {
   $("#dealsFoot").textContent = S.vinted.at ? `Dernière recherche ${ago(S.vinted.at)} · vinted.${S.vinted.domain || "fr"}${S.vinted.demo ? " · données de démo (liens factices)" : ""}` : "";
   bindRunButtons();
 }
+const COND = {5: "Neuf avec étiquette", 4: "Neuf sans étiquette", 3: "Très bon état", 2: "Bon état", 1: "Satisfaisant"};
+const REJ = {"language": "autre langue", "language?": "langue probable différente", "condition": "état insuffisant", "over_budget": "au-dessus du prix max", "graded": "gradée", "no_number": "numéro absent", "blocked": "proxy / accessoire"};
+function rejText(list) { return (list || []).map(x => { const [k, v] = x.split(":"); return (REJ[k] || k) + (v && k !== "blocked" ? " (" + v + ")" : ""); }).join(" · "); }
 function dealCard(r) {
   const ratio = r.deal_ratio, pct = ratio ? Math.min(ratio, 1) * 100 : 0;
   const col = ratio == null ? "#ccc" : ratio <= .75 ? "var(--ok)" : ratio <= .9 ? "#7aa63a" : ratio <= 1 ? "var(--warn)" : "var(--bad)";
   const vb = {match: ["ok", r.rank ? "N°" + r.rank : "Top"], review: ["warn", "À vérifier"], lot: ["info", "Lot ✓"], lot_weak: ["", "Lot ?"], more: ["", "Autre offre"], rejected: ["bad", "Rejetée"]}[r.verdict] || ["", r.verdict];
   const badges = [`<span class="b ${vb[0]}">${vb[1]}</span>`];
   if (r.new) badges.push('<span class="b new">Nouveau</span>');
-  if (r.guess_lang || r.ai_lang) badges.push(`<span class="b">${esc((r.ai_lang || r.guess_lang).toUpperCase())}</span>`);
+  const lg = r.ai_lang || r.guess_lang;
+  if (lg) badges.push(`<span class="b ${r.rule_reject && r.rule_reject.some(x => x.startsWith("language")) ? "bad" : ""}" title="${r.lang_explicit ? "Langue indiquée par le vendeur" : "Langue probable (pays ou langue du vendeur)"}">${esc(lg.toUpperCase())}${r.lang_explicit ? "" : " ?"}</span>`);
   if (r.is_graded) badges.push('<span class="b info">Gradée</span>');
   if (r.confirmed_in === "description") badges.push('<span class="b ok" title="Nom et numéro trouvés dans la description">✓ description</span>');
   const img = r.photo_url ? `style="background-image:url('${safeUrl(r.photo_url)}')"` : "";
-  const why = r.verdict === "rejected" && (r.rule_reject || []).length ? `<div class="why">${esc(r.rule_reject.join(" · "))}</div>` : "";
+  const why = ["rejected", "review"].includes(r.verdict) && (r.rule_reject || []).filter(x => x !== "lot").length ? `<div class="why">${esc(rejText(r.rule_reject.filter(x => x !== "lot")))}</div>` : "";
   const ai = r.ai_reason ? `<div class="ai">IA ${r.ai_match ? "✓" : "✗"} ${r.ai_confidence != null ? Math.round(r.ai_confidence * 100) + "% · " : ""}${esc(r.ai_reason)}</div>` : "";
   return `<div class="card">
     <div class="img" ${img}>${r.photo_url ? "" : '<div class="ph">pas de photo</div>'}<div class="badges">${badges.join("")}</div></div>
@@ -559,7 +566,7 @@ function dealCard(r) {
       <a class="t" href="${safeUrl(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a>
       <div class="price"><b>${eur(r.price)}</b>${ratio != null ? `<span>${Math.round(ratio * 100)}% de ton prix max</span>` : ""}</div>
       <div class="meter"><i style="width:${pct}%;background:${col}"></i></div>
-      <div class="meta">${esc([r.condition, r.seller].filter(Boolean).join(" · "))}</div>
+      <div class="meta">${r.cond_rank ? `<b style="color:${r.cond_rank >= 3 ? "var(--ok)" : "var(--warn)"}">${esc(COND[r.cond_rank])}</b>` : '<span title="État non communiqué dans les résultats">état ?</span>'}${r.seller ? " · " + esc(r.seller) : ""}</div>
       ${why}${ai}
     </div></div>`;
 }
@@ -639,14 +646,16 @@ function renderWishlist() {
     <td>${txt(c, i, "set_code")}</td><td>${txt(c, i, "number")}</td><td>${txt(c, i, "set_total")}</td>
     <td class="langs">${LANGS.map(l => `<label><input type="checkbox" data-i="${i}" data-lang="${l}" ${(c.languages || []).includes(l) ? "checked" : ""}> ${l}</label>`).join("")}</td>
     <td><input type="number" data-i="${i}" data-k="max_price" value="${esc(c.max_price)}" min="0"></td>
+    <td><select data-i="${i}" data-cond="1"><option value="">profil</option>${[4, 3, 2, 1].map(k => `<option value="${k}" ${+c.min_condition === k ? "selected" : ""}>${COND[k]}${k < 4 ? " +" : ""}</option>`).join("")}</select></td>
     <td><input type="checkbox" data-i="${i}" data-b="allow_graded" ${c.allow_graded ? "checked" : ""}></td>
     <td><input type="checkbox" data-i="${i}" data-b="allow_lots" ${c.allow_lots ? "checked" : ""}></td>
     <td><button class="btn small" data-del="${i}">✕</button></td></tr>`).join("")
-    || `<tr><td colspan="14" style="color:var(--muted)">Wishlist vide. Ajoute des cartes depuis le catalogue ou une capture d'écran.</td></tr>`;
+    || `<tr><td colspan="15" style="color:var(--muted)">Wishlist vide. Ajoute des cartes depuis le catalogue ou une capture d'écran.</td></tr>`;
   $$("#wl input[data-k]").forEach(inp => inp.oninput = () => { wl[inp.dataset.i][inp.dataset.k] = inp.type === "number" ? (inp.value === "" ? null : +inp.value) : inp.value; });
   $$("#wl input[data-lang]").forEach(inp => inp.onchange = () => {
     const c = wl[inp.dataset.i]; c.languages = LANGS.filter(l => $(`#wl input[data-i="${inp.dataset.i}"][data-lang="${l}"]`).checked);
   });
+  $$("#wl select[data-cond]").forEach(sel => sel.onchange = () => { wl[sel.dataset.i].min_condition = sel.value ? +sel.value : null; });
   $$("#wl input[data-b]").forEach(inp => inp.onchange = () => { wl[inp.dataset.i][inp.dataset.b] = inp.checked; });
   $$("#wl [data-del]").forEach(b => b.onclick = () => { wl.splice(+b.dataset.del, 1); renderWishlist(); });
   renderWall();
@@ -958,7 +967,7 @@ const LANGS_P = ["fr", "en", "ja", "pt"];
 function renderProfile() {
   const p = S.profile || {}, list = S.profiles || [];
   $("#profSel").innerHTML = list.map(x => `<option value="${esc(x.id)}" ${x.id === p.id ? "selected" : ""}>${esc(x.name)}</option>`).join("") + '<option value="__new">+ Nouveau profil…</option>';
-  $("#p-name").value = p.name || ""; $("#p-city").value = p.city || ""; $("#p-domain").value = p.vinted_domain || "pt";
+  $("#p-name").value = p.name || ""; $("#p-city").value = p.city || ""; $("#p-cond").value = p.min_condition || ""; $("#p-domain").value = p.vinted_domain || "pt";
   $("#p-langs").innerHTML = LANGS_P.map(l => `<label><input type="checkbox" value="${l}" ${(p.languages || []).includes(l) ? "checked" : ""}> ${l}</label>`).join("");
 }
 async function switchProfile(id) {
@@ -976,7 +985,7 @@ $("#profSel").onchange = e => e.target.value === "__new" ? newProfile() : switch
 $("#newProfile").onclick = newProfile;
 $("#saveProfile").onclick = async () => {
   const languages = $$("#p-langs input").filter(i => i.checked).map(i => i.value);
-  const r = await api("/api/profile", {name: $("#p-name").value.trim() || "Moi", city: $("#p-city").value.trim(), vinted_domain: $("#p-domain").value, languages});
+  const r = await api("/api/profile", {name: $("#p-name").value.trim() || "Moi", city: $("#p-city").value.trim(), vinted_domain: $("#p-domain").value, languages, min_condition: $("#p-cond").value ? +$("#p-cond").value : null});
   toast(r.profile.city && r.profile.lat == null ? "Profil enregistré (ville introuvable sur la carte)" : "Profil enregistré");
   mapLoaded = false; await load();
 };

@@ -259,7 +259,7 @@ def get_profile(pid: str | None = None) -> dict:
 
 def save_profile(data: dict, pid: str | None = None) -> dict:
     p = get_profile(pid)
-    for k in ("name", "city", "country", "vinted_domain", "languages", "lat", "lng"):
+    for k in ("name", "city", "country", "vinted_domain", "languages", "lat", "lng", "min_condition"):
         if k in data:
             p[k] = data[k]
     save_json(pfile("profile.json", pid), {k: v for k, v in p.items() if k != "id"})

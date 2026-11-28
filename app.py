@@ -171,6 +171,12 @@ def job_vinted(say, params=None, stop=None) -> None:
     apply_env(s)
     demo = bool(s["demo_mode"])
     cards = load_json(WISHLIST_PATH(), {"cards": []})["cards"]
+    prof = get_profile()
+    for c in cards:  # profile defaults for cards that don't set their own
+        if not c.get("min_condition") and prof.get("min_condition"):
+            c["min_condition"] = prof["min_condition"]
+        if not c.get("languages"):
+            c["languages"] = prof.get("languages") or ["fr"]
     owned = [c for c in cards if c.get("owned")]
     cards = [c for c in cards if not c.get("owned")]
     if owned:
@@ -631,7 +637,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"profile": get_profile()})
 
         if path == "/api/profile":
-            data = {k: body[k] for k in ("name", "city", "vinted_domain", "languages", "country") if k in body}
+            data = {k: body[k] for k in ("name", "city", "vinted_domain", "languages", "country", "min_condition") if k in body}
             if "city" in data and data["city"] != get_profile().get("city"):
                 g = geo.geocode(data["city"]) if data["city"] else None
                 data["lat"], data["lng"] = (g["lat"], g["lng"]) if g else (None, None)

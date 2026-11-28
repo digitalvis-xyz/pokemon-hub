@@ -31,12 +31,69 @@ def looks_like_lot(text: str) -> bool:
     return (any(w in text for w in LOT_WORDS) or bool(LOT_COUNT.search(text))
             or len(set(ANY_NUMBER.findall(text))) >= 2)
 GRADED_WORDS = ["psa", "pca", "cgc", "bgs", "beckett", "collect aura", "gradee", "graded", "slab"]
+# Explicit card-language markers (what the seller says about the CARD).
 LANG_HINTS = {
-    "ja": ["japonais", "japanese", "jap ", " jp", "japan"],
-    "en": ["anglais", "english", " eng", " en "],
-    "fr": ["francais", "french", " fr ", " vf"],
-    "pt": ["portugues", "portuguese"],
+    "ja": ["japonais", "japanese", " jap ", " jp ", " jpn ", "japan", "giapponese", "japones", "japanisch"],
+    "en": ["anglais", "english", " eng ", " en ", "inglese", "ingles", "englisch", " anglaise"],
+    "fr": ["francais", "french", " fr ", " vf ", "francese", "frances", "franzosisch", "francaise"],
+    "it": [" ita ", "italiano", "italiana", "italian", "italien", " it ", "versione italiana"],
+    "de": ["deutsch", " deu ", " ger ", "german", "allemand", "tedesco", "aleman"],
+    "es": ["espanol", "spanish", "espagnol", "spagnolo", " esp ", " spa "],
+    "pt": ["portugues", "portuguese", "portugais", "portoghese", " pt-pt"],
+    "zh": ["chinois", "chinese", "cinese", "chino", " chn ", " cn "],
+    "ko": ["coreen", "korean", "coreano", " kor "],
 }
+# Seller-language clues: on Vinted a card is usually in its seller's language unless stated.
+SELLER_WORDS = {
+    "it": ["condizioni", "spedizione", "perfette", "ottime", "nuova", "nuovo", "come da foto", "carta pokemon", "originale",
+           "vendo", "prezzo", "trattabile", "spedisco", "bustina", "per info"],
+    "fr": ["etat", "neuve", "envoi", "tres bon", "carte pokemon", "jamais jouee", "protegee", "comme neuve", "lettre suivie"],
+    "es": ["estado", "envio", "carta pokemon", "nueva", "perfecto", "vendo carta"],
+    "de": ["zustand", "versand", "karte", "neuwertig", "sehr gut"],
+    "pt": ["estado", "envio", "carta pokemon", "nova", "otimo", "portes"],
+    "en": ["condition", "shipping", "mint", "pack fresh", "pulled"],
+}
+
+# Vinted "status" (state of the item), every language mapped to a rank 5 (new) … 1 (satisfactory).
+CONDITIONS = {
+    5: ["neuf avec etiquette", "new with tags", "novo com etiqueta", "nuovo con cartellino", "nuevo con etiqueta", "neu mit etikett"],
+    4: ["neuf sans etiquette", "new without tags", "novo sem etiqueta", "nuovo senza cartellino", "nuevo sin etiqueta", "neu ohne etikett"],
+    3: ["tres bon etat", "very good", "muito bom", "ottime condizioni", "ottimo", "muy bueno", "sehr gut"],
+    2: ["bon etat", "good", "bom", "buone condizioni", "buono", "bueno", "gut"],
+    1: ["satisfaisant", "satisfactory", "satisfatorio", "discrete condizioni", "discreto", "satisfactorio", "zufriedenstellend"],
+}
+CONDITION_LABEL = {5: "Neuf avec étiquette", 4: "Neuf sans étiquette", 3: "Très bon état", 2: "Bon état", 1: "Satisfaisant"}
+
+
+def condition_rank(text: str) -> int | None:
+    t = norm(text or "")
+    if not t:
+        return None
+    for rank in (5, 4, 3, 1, 2):  # check "tres bon" before "bon", "satisfaisant" before "good"
+        if any(w in t for w in CONDITIONS[rank]):
+            return rank
+    return None
+
+
+def card_language(text: str, card: dict) -> tuple[str | None, bool]:
+    """(language, explicit). Explicit marker first, then a French-only name, then seller language."""
+    for lg, hints in LANG_HINTS.items():
+        if any(h in text for h in hints):
+            return lg, True
+    fr, en = norm(card.get("name_fr", "")), norm(card.get("name_en", ""))
+    fr_base, en_base = fr.replace(" ex", "").strip(), en.replace(" ex", "").strip()
+    if fr_base and fr_base != en_base and fr_base in text:
+        return "fr", True  # "Dracaufeu" only exists on French cards
+    country = (card.get("_seller_country") or "").upper()
+    by_country = {"IT": "it", "FR": "fr", "BE": "fr", "LU": "fr", "ES": "es", "DE": "de", "AT": "de", "PT": "pt",
+                  "NL": "nl", "GB": "en", "UK": "en", "IE": "en", "US": "en", "PL": "pl", "CZ": "cs", "LT": "lt"}
+    scores = {lg: sum(1 for w in words if w in text) for lg, words in SELLER_WORDS.items()}
+    if country in by_country and scores.get(by_country[country], 0) >= 0 and max(scores.values()) < 2:
+        return by_country[country], False
+    best = max(scores, key=scores.get)
+    if scores[best] >= 2 or (scores[best] == 1 and sorted(scores.values())[-2] == 0 and best != "en"):
+        return best, False
+    return None, False
 
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-5-5")
 
@@ -80,7 +137,8 @@ def rule_check(listing: dict, card: dict) -> dict:
     blocked = [w for w in BLOCK_WORDS if w in title_txt] + [w for w in DESC_BLOCK_WORDS if w in desc_txt and w not in title_txt]
     is_lot = looks_like_lot(text)
     is_graded = any(w in text for w in GRADED_WORDS)
-    lang = next((lg for lg, hints in LANG_HINTS.items() if any(h in text for h in hints)), None)
+    lang, lang_explicit = card_language(text, dict(card, _seller_country=listing.get("seller_country", "")))
+    cond_rank = condition_rank(listing.get("condition", ""))
 
     reject = []
     if blocked:
@@ -89,8 +147,13 @@ def rule_check(listing: dict, card: dict) -> dict:
         reject.append("lot")
     if is_graded and not card.get("allow_graded"):
         reject.append("graded")
-    if lang and card.get("languages") and lang not in card["languages"]:
-        reject.append("language:" + lang)
+    wanted = card.get("languages") or []
+    if lang and wanted and lang not in wanted:
+        # explicit marker = hard reject; seller-language guess = soft (goes to "À vérifier")
+        reject.append(("language:" if lang_explicit else "language?:") + lang)
+    min_cond = card.get("min_condition")
+    if min_cond and cond_rank is not None and cond_rank < int(min_cond):
+        reject.append("condition:" + CONDITION_LABEL[cond_rank])
     price = listing.get("price")
     if price is not None and card.get("max_price") and price > card["max_price"]:
         reject.append("over_budget")
@@ -113,7 +176,7 @@ def rule_check(listing: dict, card: dict) -> dict:
         rule_score=score,
         rule_flags=flags,
         rule_reject=reject,
-        guess_lang=lang,
+        guess_lang=lang, lang_explicit=lang_explicit, cond_rank=cond_rank,
         is_lot=is_lot,
         is_graded=is_graded,
         deal_ratio=round(price / card["max_price"], 2) if price and card.get("max_price") else None,

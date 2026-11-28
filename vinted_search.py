@@ -18,7 +18,7 @@ import os
 import re
 import sys
 
-from classify import claude_check, rule_check
+from classify import claude_check, condition_rank, rule_check
 from common import ROOT, STATE_DIR, Http, ensure_profiles, load_json, pfile, polite_sleep, pstate, save_json, stamp
 from notify import telegram
 from report import write_csv, write_html
@@ -128,8 +128,8 @@ class Vinted:
             raise RuntimeError("Page catalogue Vinted HTTP %s" % status)
         return items
 
-    def item_description(self, url: str) -> str | None:
-        """Description of one listing, read from its public page (JSON-LD, then meta tags)."""
+    def item_details(self, url: str) -> dict | None:
+        """Description, condition and seller country of one listing, read from its public page."""
         try:
             status, page = self.http.get(url, headers={"Accept": "text/html"})
         except Exception as e:
@@ -138,24 +138,40 @@ class Vinted:
         if status != 200:
             self._note("annonce", status, url)
             return None
+        out = {"description": "", "condition": "", "country": ""}
         for block in re.findall(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', page, re.S | re.I):
             try:
                 data = json.loads(html_unescape(block.strip()))
             except Exception:
                 continue
             for obj in (data if isinstance(data, list) else [data]):
-                if isinstance(obj, dict) and obj.get("description"):
-                    return str(obj["description"])
-        m = (re.search(r'<meta[^>]+(?:name|property)="(?:og:)?description"[^>]+content="([^"]*)"', page)
-             or re.search(r'"description"\s*:\s*"((?:[^"\\]|\\.){10,4000})"', page))
+                if not isinstance(obj, dict):
+                    continue
+                if obj.get("description") and not out["description"]:
+                    out["description"] = str(obj["description"])
+                offers = obj.get("offers") if isinstance(obj.get("offers"), dict) else {}
+                cond = str(obj.get("itemCondition") or offers.get("itemCondition") or "")
+                if "NewCondition" in cond and not out["condition"]:
+                    out["condition"] = "Neuf sans étiquette"
+        if not out["description"]:
+            m = (re.search(r'<meta[^>]+(?:name|property)="(?:og:)?description"[^>]+content="([^"]*)"', page)
+                 or re.search(r'"description"\s*:\s*"((?:[^"\\]|\\.){10,4000})"', page))
+            if m:
+                txt = m.group(1)
+                try:
+                    txt = json.loads('"%s"' % txt) if "\\" in txt else txt
+                except Exception:
+                    pass
+                out["description"] = html_unescape(txt)
+        # Vinted's own "status" field (État / Estado / Condition…) beats the schema.org guess
+        m = (re.search(r'"status"\s*:\s*"([^"]{3,40})"', page)
+             or re.search(r'(?:[EÉ]tat|Estado|Condition|Stato|Zustand)\s*</[^>]+>\s*(?:<[^>]+>\s*)*([^<]{3,40})<', page))
+        if m and condition_rank(html_unescape(m.group(1))):
+            out["condition"] = html_unescape(m.group(1)).strip()
+        m = re.search(r'"(?:country_code|country_iso_code)"\s*:\s*"([A-Z]{2})"', page)
         if m:
-            txt = m.group(1)
-            try:
-                txt = json.loads('"%s"' % txt) if "\\" in txt else txt
-            except Exception:
-                pass
-            return html_unescape(txt)
-        return ""
+            out["country"] = m.group(1)
+        return out
 
     def search(self, text: str, price_to: float | None = None, per_page: int = 48) -> list[dict]:
         if not self.ready:
@@ -211,6 +227,7 @@ def normalise_item(it: dict, base: str) -> dict:
         "url": url,
         "photo_url": photo.get("url") or photo.get("full_size_url") or "",
         "description_full": it.get("description_full", ""),  # only in offline fixtures
+        "seller_country": (user.get("country_code") or user.get("country_iso_code") or it.get("country_code") or "") if isinstance(user, dict) else "",
     }
 
 
@@ -259,11 +276,15 @@ def decide(r: dict) -> str:
     reject = [x for x in r["rule_reject"] if x not in ("lot", "no_number")]
     if any(x.startswith("blocked") for x in reject):
         return "rejected"                       # proxy, fake, custom…
+    soft = [x for x in reject if x.startswith("language?")]
+    hard = [x for x in reject if x not in soft]
     full = r.get("id_hit") and r.get("name_hit")
     if r["is_lot"]:
         return "lot" if full else "lot_weak"    # lot that provably contains the card / maybe
     if full and not reject:
         return "match"
+    if full and soft and not hard:
+        return "review"                         # probably another language: shown, not as a best offer
     if r.get("name_hit") and ("number" in r["rule_flags"] or "exact_number" in r["rule_flags"]) and not reject:
         return "review"                         # name + a number that isn't clearly 199/165
     return "rejected"
@@ -331,15 +352,20 @@ def search(cards: list[dict], domain: str = "fr", fixtures: bool = False, use_ai
         # sellers often put the number (199/165) there, and lots list their cards there.
         def read_desc(x: dict) -> None:
             """Open one listing, re-run the rules with its description, replace it in card_rows."""
+            src = listings[x["listing_id"]]
             if client is not None:
-                desc = client.item_description(x["url"])
+                det = client.item_details(x["url"])
                 polite_sleep(min(delay, 2.0))
-            else:
-                desc = listings[x["listing_id"]].get("description_full")  # offline fixtures
-            if not desc:
+            else:  # offline fixtures
+                det = {"description": src.get("description_full", ""), "condition": "", "country": ""}
+            if not det:
                 x["desc_checked"] = True
                 return
-            y = rule_check(dict(listings[x["listing_id"]], description=desc), card)
+            if det.get("condition") and not src.get("condition"):
+                src["condition"] = det["condition"]
+            if det.get("country") and not src.get("seller_country"):
+                src["seller_country"] = det["country"]
+            y = rule_check(dict(src, description=det.get("description") or ""), card)
             y.update({k: x[k] for k in ("query_card", "new", "demo")}, desc_checked=True)
             y["verdict"] = decide(y)
             card_rows[card_rows.index(x)] = y
